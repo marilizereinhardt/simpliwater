@@ -1,14 +1,23 @@
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
-import json, os
+import cloudinary
+import cloudinary.uploader
+import os
 
 app = Flask(__name__)
 
-# Simple in-memory storage for now
+# Cloudinary config
+cloudinary.config(
+    cloud_name = "dfonq8k86",
+    api_key = "428797737134981",
+    api_secret = "tNUZMw-xBME2nYKL5jwABqu9wzU"
+)
+
+# In-memory storage
 jobs = [
-    {"id": "SW-001", "client": "Residencia Belle Vue", "type": "CIPP Pipe Lining", "date": "2026-06-02", "status": "In Progress", "technician": "Husband", "notes": ""},
-    {"id": "SW-002", "client": "Grand Baie Hotel", "type": "Pipe Inspection", "date": "2026-06-01", "status": "Quoted", "technician": "Husband", "notes": ""},
-    {"id": "SW-003", "client": "Tamarin Villas", "type": "Emergency Repair", "date": "2026-05-31", "status": "Open", "technician": "Worker", "notes": ""},
+    {"id": "SW-001", "client": "Residencia Belle Vue", "type": "CIPP Pipe Lining", "date": "2026-06-02", "status": "In Progress", "technician": "Husband", "notes": "", "photos": []},
+    {"id": "SW-002", "client": "Grand Baie Hotel", "type": "Pipe Inspection", "date": "2026-06-01", "status": "Quoted", "technician": "Husband", "notes": "", "photos": []},
+    {"id": "SW-003", "client": "Tamarin Villas", "type": "Emergency Repair", "date": "2026-05-31", "status": "Open", "technician": "Worker", "notes": "", "photos": []},
 ]
 
 @app.route('/')
@@ -29,10 +38,27 @@ def create_job():
         "date": data.get("date", datetime.now().strftime("%Y-%m-%d")),
         "status": "Open",
         "technician": data.get("technician", "Husband"),
-        "notes": data.get("notes", "")
+        "notes": data.get("notes", ""),
+        "photos": []
     }
     jobs.append(job)
     return jsonify(job), 201
+
+@app.route('/api/upload', methods=['POST'])
+def upload_photo():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file"}), 400
+    file = request.files['file']
+    job_id = request.form.get('job_id', 'general')
+    result = cloudinary.uploader.upload(
+        file,
+        folder=f"simpliwater/{job_id}",
+        resource_type="auto"
+    )
+    return jsonify({
+        "url": result['secure_url'],
+        "public_id": result['public_id']
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
