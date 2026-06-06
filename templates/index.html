@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simpliwater — Field Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--blue-deep:#0a2540;--blue-mid:#1a4a7a;--blue-bright:#1e90ff;--blue-light:#e8f4ff;--water:#4fc3f7;--accent:#00d4aa;--danger:#ff4757;--warning:#ffa502;--purple:#7c3aed;--text:#0a2540;--text-light:#6b8aaa;--border:#d0e4f5;--white:#ffffff;--surface:#f4f9ff;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue-deep) 0%,var(--blue-mid) 60%,#0d6eaa 100%);position:relative;overflow:hidden;}
+#login-screen::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(79,195,247,.15) 0%,transparent 70%);top:-100px;right:-100px;animation:pulse 4s ease-in-out infinite;}
+#login-screen::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,170,.1) 0%,transparent 70%);bottom:-50px;left:-50px;animation:pulse 6s ease-in-out infinite reverse;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.8;}50%{transform:scale(1.1);opacity:1;}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+.login-card{background:rgba(255,255,255,.97);border-radius:20px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;z-index:1;animation:slideUp .5s ease;}
+.brand{font-family:'Bebas Neue',cursive;letter-spacing:3px;line-height:1;}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo .brand{font-size:42px;color:var(--blue-deep);}
+.login-logo .brand span{color:var(--blue-bright);}
+.login-logo .tagline{font-size:12px;color:var(--text-light);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.water-bar{height:3px;background:linear-gradient(90deg,var(--blue-bright),var(--accent));border-radius:2px;margin:16px auto;width:60px;}
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--white);transition:border-color .2s,box-shadow .2s;outline:none;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(30,144,255,.12);}
+.form-group textarea{resize:vertical;min-height:80px;}
+.btn-primary{width:100%;padding:14px;background:linear-gradient(135deg,var(--blue-bright),var(--blue-mid));color:white;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:.5px;transition:transform .15s,box-shadow .15s;margin-top:8px;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(30,144,255,.35);}
+.demo-hint{text-align:center;margin-top:20px;font-size:12px;color:var(--text-light);}
+.demo-hint strong{color:var(--blue-bright);cursor:pointer;}
+#app{display:none;min-height:100vh;}
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--blue-deep);display:flex;flex-direction:column;z-index:100;transition:transform .3s ease;}
+.sidebar-brand{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sidebar-brand .brand{font-size:28px;color:white;}
+.sidebar-brand .brand span{color:var(--water);}
+.sidebar-brand .tagline{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.sidebar-user{padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.08);}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue-bright),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:white;margin-bottom:8px;}
+.sidebar-user .name{font-size:13px;font-weight:600;color:white;}
+.sidebar-user .role{font-size:11px;color:var(--water);text-transform:uppercase;letter-spacing:1px;}
+.nav-section{padding:16px 12px 8px;flex:1;overflow-y:auto;}
+.nav-label{font-size:10px;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px;padding:0 12px;margin-bottom:6px;margin-top:16px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s;color:rgba(255,255,255,.6);font-size:14px;font-weight:500;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.08);color:white;}
+.nav-item.active{background:rgba(30,144,255,.25);color:white;}
+.nav-item .icon{font-size:18px;width:22px;text-align:center;}
+.nav-item .badge{margin-left:auto;background:var(--accent);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;}
+.sidebar-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.08);}
+.btn-logout{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:none;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.5);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
+.btn-logout:hover{background:rgba(255,71,87,.15);border-color:var(--danger);color:var(--danger);}
+.main{margin-left:240px;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:white;padding:16px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:20px;font-weight:600;color:var(--text);}
+.topbar-actions{display:flex;gap:12px;align-items:center;}
+.btn-new{display:flex;align-items:center;gap:6px;padding:9px 18px;background:linear-gradient(135deg,var(--blue-bright),var(--blue-mid));color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.btn-new:hover{transform:translateY(-1px);box-shadow:0 5px 15px rgba(30,144,255,.3);}
+.content{padding:32px;flex:1;}
+.page{display:none;}
+.page.active{display:block;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;margin-bottom:32px;}
+.stat-card{background:white;border-radius:14px;padding:24px;border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(10,37,64,.08);}
+.stat-card::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:0 14px 0 80px;opacity:.08;}
+.stat-card.blue::after{background:var(--blue-bright);}
+.stat-card.green::after{background:var(--accent);}
+.stat-card.orange::after{background:var(--warning);}
+.stat-card.red::after{background:var(--danger);}
+.stat-icon{font-size:28px;margin-bottom:12px;}
+.stat-value{font-size:32px;font-weight:700;color:var(--text);line-height:1;}
+.stat-label{font-size:13px;color:var(--text-light);margin-top:4px;}
+.stat-change{font-size:12px;margin-top:8px;font-weight:500;}
+.stat-change.up{color:var(--accent);}
+.stat-change.down{color:var(--danger);}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-title{font-size:16px;font-weight:600;color:var(--text);}
+.btn-text{background:none;border:none;color:var(--blue-bright);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;}
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:32px;}
+.quick-card{background:white;border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;}
+.quick-card:hover{border-color:var(--blue-bright);box-shadow:0 4px 15px rgba(30,144,255,.12);transform:translateY(-2px);}
+.q-icon{font-size:32px;margin-bottom:10px;}
+.q-label{font-size:13px;font-weight:600;color:var(--text);}
+.q-sub{font-size:11px;color:var(--text-light);margin-top:3px;}
+.jobs-card{background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:24px;}
+.jobs-table{width:100%;border-collapse:collapse;}
+.jobs-table th{padding:14px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;background:var(--surface);border-bottom:1px solid var(--border);}
+.jobs-table td{padding:14px 20px;font-size:14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.jobs-table tr:last-child td{border-bottom:none;}
+.jobs-table tr:hover td{background:var(--blue-light);}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+.status-badge.open{background:#e3f2fd;color:#1565c0;}
+.status-badge.progress{background:#fff3e0;color:#e65100;}
+.status-badge.quoted{background:#f3e5f5;color:#6a1b9a;}
+.status-badge.closed{background:#e8f5e9;color:#2e7d32;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.client-name{font-weight:600;color:var(--text);}
+.job-id{font-size:12px;color:var(--text-light);margin-top:2px;}
+.btn-action{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:white;color:var(--blue-bright);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-action:hover{background:var(--blue-light);border-color:var(--blue-bright);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.btn-secondary{padding:11px 22px;border-radius:8px;border:1.5px solid var(--border);background:white;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;}
+.btn-secondary:hover{background:var(--surface);}
+.btn-save{padding:11px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--blue-bright),var(--blue-mid));color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-save:hover{box-shadow:0 5px 15px rgba(30,144,255,.3);}
+.btn-ai{padding:11px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--purple),#4f46e5);color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px;}
+.btn-ai:hover{box-shadow:0 5px 15px rgba(124,58,237,.3);}
+.btn-ai:disabled{opacity:.6;cursor:not-allowed;}
+.quote-section{background:var(--surface);border-radius:12px;padding:20px;margin-bottom:20px;}
+.quote-section-title{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+.service-picker{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.service-picker select{flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;}
+.service-picker select:focus{border-color:var(--blue-bright);}
+.btn-add-item{padding:10px 18px;background:var(--blue-bright);color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.line-items{width:100%;border-collapse:collapse;margin-bottom:12px;}
+.line-items th{font-size:11px;font-weight:600;color:var(--text-light);text-transform:uppercase;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.line-items td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle;}
+.line-items td input{padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;}
+.line-items td input:focus{border-color:var(--blue-bright);}
+.line-items td input.desc-input{width:100%;}
+.line-items td input.num-input{width:75px;}
+.btn-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 6px;}
+.quote-total{text-align:right;padding:14px 16px;background:var(--blue-deep);border-radius:8px;color:white;}
+.quote-total .qlabel{font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:1px;}
+.quote-total .amount{font-size:28px;font-weight:700;}
+.ai-box{background:linear-gradient(135deg,#f5f0ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:12px;padding:20px;margin-top:20px;}
+.ai-box-title{font-size:13px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.ai-result{background:white;border-radius:10px;padding:16px;margin-top:14px;font-size:14px;line-height:1.7;color:var(--text);border:1px solid #e0d9ff;white-space:pre-wrap;display:none;}
+.ai-result.show{display:block;}
+.ai-loader{display:none;padding:16px 0;color:var(--purple);font-size:14px;}
+.ai-loader.show{display:block;}
+.tab-bar{display:flex;gap:4px;background:var(--surface);border-radius:10px;padding:4px;margin-bottom:24px;border:1px solid var(--border);}
+.tab-btn{flex:1;padding:9px 8px;border:none;background:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text-light);cursor:pointer;transition:all .15s;}
+.tab-btn.active{background:white;color:var(--blue-bright);box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;background:white;}
+.upload-zone:hover{border-color:var(--blue-bright);background:var(--blue-light);}
+.uz-icon{font-size:36px;margin-bottom:8px;}
+.uz-label{font-size:14px;font-weight:600;color:var(--text);}
+.uz-sub{font-size:12px;color:var(--text-light);margin-top:4px;}
+.transcript-box{background:white;border:1.5px solid var(--border);border-radius:10px;padding:16px;margin-top:14px;font-size:14px;line-height:1.7;color:var(--text);min-height:80px;white-space:pre-wrap;display:none;}
+.transcript-box.show{display:block;}
+.coming-soon{text-align:center;padding:80px 20px;color:var(--text-light);}
+.coming-soon .cs-icon{font-size:64px;margin-bottom:16px;}
+.coming-soon h3{font-size:22px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.coming-soon p{font-size:15px;max-width:360px;margin:0 auto;}
+.stage-badge{display:inline-block;background:linear-gradient(135deg,var(--blue-bright),var(--accent));color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:12px;letter-spacing:1px;text-transform:uppercase;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--blue-deep);color:white;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;box-shadow:0 8px 25px rgba(0,0,0,.2);z-index:999;display:none;animation:slideUp .3s ease;}
+.toast.show{display:block;}
+.card-pad{padding:28px;}
+@media(max-width:768px){.sidebar{transform:translateX(-100%);}
+.sidebar.open{transform:translateX(0);}
+.main{margin-left:0;}
+.topbar{padding:14px 16px;}
+.content{padding:16px;}
+.form-row{grid-template-columns:1fr;}
+.stats-grid{grid-template-columns:1fr 1fr;gap:12px;}
+.stat-value{font-size:24px;}
+.jobs-table th:nth-child(4),.jobs-table td:nth-child(4),.jobs-table th:nth-child(3),.jobs-table td:nth-child(3){display:none;}}
+.hamburger{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text);padding:4px;}
+@media(max-width:768px){.hamburger{display:block;}}
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;}
+.overlay-bg.show{display:block;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="brand">SIMPLI<span>WATER</span></div>
+      <div class="water-bar"></div>
+      <div class="tagline">Field Management System</div>
+    </div>
+    <div class="form-group"><label>Username</label><input type="text" id="login-user" placeholder="Enter your name"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Enter password"/></div>
+    <div class="form-group"><label>Login As</label>
+      <select id="login-role">
+        <option value="admin">Admin / Invoicing (Marilize)</option>
+        <option value="partner">Partner</option>
+        <option value="technician">Technician (Field)</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Sign In &rarr;</button>
+    <div class="demo-hint">Demo mode &mdash; <strong onclick="quickLogin()">click here to enter as Marilize</strong></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="overlay-bg" id="overlay-bg" onclick="closeSidebar()"></div>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand">SIMPLI<span>WATER</span></div>
+      <div class="tagline">Field Management</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">M</div>
+      <div class="name" id="user-name">Marilize van den Heever</div>
+      <div class="role" id="user-role">Admin</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">&#128202;</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('jobs',this)"><span class="icon">&#128295;</span> Jobs <span class="badge">3</span></div>
+      <div class="nav-item" onclick="showPage('newjob',this)"><span class="icon">&#43;</span> New Job</div>
+      <div class="nav-item" onclick="showPage('leads',this)"><span class="icon">&#127919;</span> Leads</div>
+      <div class="nav-label">Finance</div>
+      <div class="nav-item" onclick="showPage('quotes',this)"><span class="icon">&#128203;</span> Quote Builder</div>
+      <div class="nav-item" onclick="showPage('invoices',this)"><span class="icon">&#128179;</span> Invoices</div>
+      <div class="nav-item" onclick="showPage('billing',this)"><span class="icon">&#128176;</span> Billing</div>
+      <div class="nav-label">Field Tools</div>
+      <div class="nav-item" onclick="showPage('reports',this)"><span class="icon">&#129302;</span> AI Reports</div>
+      <div class="nav-item" onclick="showPage('video',this)"><span class="icon">&#127908;</span> Video &amp; Transcribe</div>
+      <div class="nav-item" onclick="showPage('media',this)"><span class="icon">&#128193;</span> Media Library</div>
+      <div class="nav-label">Analytics</div>
+      <div class="nav-item" onclick="showPage('analytics',this)"><span class="icon">&#128200;</span> Analytics</div>
+      <div class="nav-label">Settings</div>
+      <div class="nav-item" onclick="showPage('users',this)"><span class="icon">&#128101;</span> Users</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-new" onclick="showPage('newjob',null)">&#43; New Job</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card blue"><div class="stat-icon">&#128295;</div><div class="stat-value">12</div><div class="stat-label">Active Jobs</div><div class="stat-change up">&#8593; 3 this week</div></div>
+          <div class="stat-card green"><div class="stat-icon">&#9989;</div><div class="stat-value">47</div><div class="stat-label">Jobs Closed</div><div class="stat-change up">&#8593; 8 this month</div></div>
+          <div class="stat-card orange"><div class="stat-icon">&#128203;</div><div class="stat-value">5</div><div class="stat-label">Quotes Pending</div><div class="stat-change">Awaiting approval</div></div>
+          <div class="stat-card red"><div class="stat-icon">&#8987;</div><div class="stat-value">Rs 24k</div><div class="stat-label">Outstanding</div><div class="stat-change down">2 overdue</div></div>
+        </div>
+        <div class="section-header"><div class="section-title">Quick Actions</div></div>
+        <div class="quick-grid">
+          <div class="quick-card" onclick="showPage('newjob',null)"><div class="q-icon">&#128295;</div><div class="q-label">New Job</div><div class="q-sub">Start a field job</div></div>
+          <div class="quick-card" onclick="showPage('quotes',null)"><div class="q-icon">&#128203;</div><div class="q-label">Build Quote</div><div class="q-sub">On-site pricing</div></div>
+          <div class="quick-card" onclick="showPage('reports',null)"><div class="q-icon">&#129302;</div><div class="q-label">AI Report</div><div class="q-sub">Generate instantly</div></div>
+          <div class="quick-card" onclick="showPage('video',null)"><div class="q-icon">&#127916;</div><div class="q-label">Transcribe Video</div><div class="q-sub">Auto transcript</div></div>
+        </div>
+        <div class="section-header">
+          <div class="section-title">Recent Jobs</div>
+          <button class="btn-text" onclick="showPage('jobs',null)">View all &rarr;</button>
+        </div>
+        <div class="jobs-card">
+          <table class="jobs-table">
+            <thead><tr><th>Client</th><th>Type of Work</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="jobs-tbody">
+              <tr><td><div class="client-name">Residencia Belle Vue</div><div class="job-id">#SW-001</div></td><td>CIPP Pipe Lining</td><td>02 Jun 2026</td><td><span class="status-badge progress"><span class="status-dot"></span>In Progress</span></td><td><button class="btn-action" onclick="goReport('Residencia Belle Vue #SW-001')">Open</button></td></tr>
+              <tr><td><div class="client-name">Grand Baie Hotel</div><div class="job-id">#SW-002</div></td><td>Pipe Inspection</td><td>01 Jun 2026</td><td><span class="status-badge quoted"><span class="status-dot"></span>Quoted</span></td><td><button class="btn-action">Open</button></td></tr>
+              <tr><td><div class="client-name">Tamarin Villas</div><div class="job-id">#SW-003</div></td><td>Emergency Repair</td><td>31 May 2026</td><td><span class="status-badge open"><span class="status-dot"></span>Open</span></td><td><button class="btn-action">Open</button></td></tr>
+              <tr><td><div class="client-name">Port Louis Municipality</div><div class="job-id">#SW-004</div></td><td>CIPP Rehabilitation</td><td>28 May 2026</td><td><span class="status-badge closed"><span class="status-dot"></span>Closed</span></td><td><button class="btn-action">Open</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NEW JOB -->
+      <div class="page" id="page-newjob">
+        <div class="jobs-card card-pad" style="max-width:680px;">
+          <div class="form-row">
+            <div class="form-group"><label>Client Name</label><input type="text" id="nj-client" placeholder="Client or company name"/></div>
+            <div class="form-group"><label>Job Date</label><input type="date" id="nj-date"/></div>
+          </div>
+          <div class="form-group"><label>Site Address</label><input type="text" id="nj-address" placeholder="Job site location"/></div>
+          <div class="form-row">
+            <div class="form-group"><label>Nature of Work</label>
+              <select id="nj-type">
+                <option>CIPP Pipe Lining</option><option>Camera Inspection</option><option>Pipe Rehabilitation</option>
+                <option>Emergency Repair</option><option>Maintenance</option><option>Fault Finding</option><option>Other</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Assign Technician</label>
+              <select id="nj-tech"><option>Husband</option><option>Worker</option><option>Both</option></select>
+            </div>
+          </div>
+          <div class="form-group"><label>Pipe Details (diameter, length, material)</label><input type="text" id="nj-pipe" placeholder="e.g. 150mm, 45m, PVC"/></div>
+          <div class="form-group"><label>Fault Description / Notes</label><textarea id="nj-notes" placeholder="Describe the fault, site conditions, special instructions..."></textarea></div>
+          <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+            <button class="btn-secondary" onclick="showPage('dashboard',null)">Cancel</button>
+            <button class="btn-save" onclick="saveNewJob()">Save Job &rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JOBS LIST -->
+      <div class="page" id="page-jobs">
+        <div class="jobs-card">
+          <table class="jobs-table">
+            <thead><tr><th>Job ID</th><th>Client</th><th>Work Type</th><th>Technician</th><th>Date</th><th>Status</th><th></th></tr></thead>
+            <tbody id="alljobs-tbody">
+              <tr><td>#SW-001</td><td><div class="client-name">Residencia Belle Vue</div></td><td>CIPP Pipe Lining</td><td>Husband</td><td>02 Jun 2026</td><td><span class="status-badge progress"><span class="status-dot"></span>In Progress</span></td><td><button class="btn-action">Open</button></td></tr>
+              <tr><td>#SW-002</td><td><div class="client-name">Grand Baie Hotel</div></td><td>Pipe Inspection</td><td>Husband</td><td>01 Jun 2026</td><td><span class="status-badge quoted"><span class="status-dot"></span>Quoted</span></td><td><button class="btn-action">Open</button></td></tr>
+              <tr><td>#SW-003</td><td><div class="client-name">Tamarin Villas</div></td><td>Emergency Repair</td><td>Worker</td><td>31 May 2026</td><td><span class="status-badge open"><span class="status-dot"></span>Open</span></td><td><button class="btn-action">Open</button></td></tr>
+              <tr><td>#SW-004</td><td><div class="client-name">Port Louis Municipality</div></td><td>CIPP Rehabilitation</td><td>Husband</td><td>28 May 2026</td><td><span class="status-badge closed"><span class="status-dot"></span>Closed</span></td><td><button class="btn-action">Open</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- QUOTE BUILDER -->
+      <div class="page" id="page-quotes">
+        <div style="max-width:720px;">
+          <div class="jobs-card card-pad">
+            <div class="form-row" style="margin-bottom:16px;">
+              <div class="form-group"><label>Client Name</label><input type="text" id="q-client" placeholder="Client name"/></div>
+              <div class="form-group"><label>Quote Date</label><input type="date" id="q-date"/></div>
+            </div>
+            <div class="form-group" style="margin-bottom:20px;"><label>Site Address / Job Reference</label><input type="text" id="q-ref" placeholder="Address or job number"/></div>
+            <div class="quote-section">
+              <div class="quote-section-title">Services &amp; Items</div>
+              <div class="service-picker">
+                <select id="service-select">
+                  <option value="">-- Select a service --</option>
+                  <option value="Camera Inspection|1000|1|job">Camera Inspection &mdash; Rs 1,000</option>
+                  <option value="CIPP Pipe Relining|2000|1|m">CIPP Pipe Relining (per metre) &mdash; Rs 2,000</option>
+                  <option value="Call Out Fee|500|1|job">Call Out Fee &mdash; Rs 500</option>
+                  <option value="Labour|800|1|hr">Labour (per hour) &mdash; Rs 800</option>
+                  <option value="Emergency Call Out|1500|1|job">Emergency Call Out &mdash; Rs 1,500</option>
+                  <option value="Pipe Rehabilitation|3500|1|job">Pipe Rehabilitation &mdash; Rs 3,500</option>
+                  <option value="CCTV Survey|1200|1|job">CCTV Survey &mdash; Rs 1,200</option>
+                  <option value="Hydro Jetting|900|1|job">Hydro Jetting &mdash; Rs 900</option>
+                  <option value="Resin Materials|650|1|L">Resin Materials (per litre) &mdash; Rs 650</option>
+                  <option value="Pipe Liner|1800|1|m">Pipe Liner (per metre) &mdash; Rs 1,800</option>
+                  <option value="Travel / Mobilisation|400|1|job">Travel / Mobilisation &mdash; Rs 400</option>
+                  <option value="Custom Item|0|1|unit">+ Custom Item</option>
+                </select>
+                <button class="btn-add-item" onclick="addLineItem()">Add +</button>
+              </div>
+              <table class="line-items">
+                <thead><tr><th style="width:38%">Description</th><th>Unit</th><th>Qty</th><th>Rate (Rs)</th><th>Total</th><th></th></tr></thead>
+                <tbody id="line-items-body">
+                  <tr id="empty-li"><td colspan="6" style="text-align:center;color:var(--text-light);padding:20px;font-size:13px;">Select a service above and click Add +</td></tr>
+                </tbody>
+              </table>
+              <div class="quote-total">
+                <div class="qlabel">TOTAL AMOUNT (MUR)</div>
+                <div class="amount" id="quote-total">Rs 0.00</div>
+              </div>
+            </div>
+            <div class="form-group"><label>Notes / Payment Terms</label><textarea id="q-notes" placeholder="e.g. Payment within 30 days. Warranty 12 months on liner."></textarea></div>
+            <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
+              <button class="btn-secondary" onclick="clearQuote()">Clear</button>
+              <button class="btn-save" onclick="printQuote()">Print / Save PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI REPORTS -->
+      <div class="page" id="page-reports">
+        <div style="max-width:700px;">
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('field',this)">Field Report</button>
+            <button class="tab-btn" onclick="switchTab('fault',this)">Fault Finding</button>
+            <button class="tab-btn" onclick="switchTab('recommend',this)">Recommendation</button>
+          </div>
+          <div class="jobs-card card-pad">
+            <div class="form-row" style="margin-bottom:16px;">
+              <div class="form-group"><label>Client / Job</label><input type="text" id="r-client" placeholder="Client name or job ID"/></div>
+              <div class="form-group"><label>Date</label><input type="date" id="r-date"/></div>
+            </div>
+            <div class="form-group"><label>Site Address</label><input type="text" id="r-address" placeholder="Site location"/></div>
+            <div class="form-row">
+              <div class="form-group"><label>Pipe Diameter</label><input type="text" id="r-diam" placeholder="e.g. 150mm"/></div>
+              <div class="form-group"><label>Pipe Length</label><input type="text" id="r-len" placeholder="e.g. 45 metres"/></div>
+            </div>
+            <div class="form-group"><label>Nature of Work</label>
+              <select id="r-type">
+                <option>Camera Inspection</option><option>CIPP Pipe Lining</option>
+                <option>Emergency Repair</option><option>Fault Finding</option>
+                <option>Pipe Rehabilitation</option><option>CCTV Survey</option><option>Hydro Jetting</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Your Field Notes (bullet points or sentences)</label>
+              <textarea id="r-notes" style="min-height:120px;" placeholder="e.g.&#10;- Found crack at 12m&#10;- Root intrusion at joints&#10;- Pipe installed 1980s, PVC&#10;- Applied CIPP liner, cured 2 hours&#10;- Flow restored to normal"></textarea>
+            </div>
+            <div class="ai-box">
+              <div class="ai-box-title">&#129302; AI Report Generator</div>
+              <p style="font-size:13px;color:#5b21b6;margin-bottom:14px;">Fill in your notes above then click Generate. AI writes a professional report from your field notes instantly.</p>
+              <button class="btn-ai" id="gen-btn" onclick="generateReport()">&#10024; Generate Report</button>
+              <div class="ai-loader" id="ai-loader">&#129302; Writing your report...</div>
+              <div class="ai-result" id="ai-result"></div>
+              <div id="report-actions" style="display:none;gap:10px;margin-top:12px;flex-wrap:wrap;">
+                <button class="btn-secondary" onclick="copyReport()">Copy Text</button>
+                <button class="btn-save" onclick="printReport()">Print / PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIDEO & TRANSCRIBE -->
+      <div class="page" id="page-video">
+        <div style="max-width:680px;">
+          <div class="jobs-card card-pad">
+            <div class="form-row" style="margin-bottom:20px;">
+              <div class="form-group"><label>Link to Job</label>
+                <select id="v-job">
+                  <option>#SW-001 -- Residencia Belle Vue</option>
+                  <option>#SW-002 -- Grand Baie Hotel</option>
+                  <option>#SW-003 -- Tamarin Villas</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Date</label><input type="date" id="v-date"/></div>
+            </div>
+            <div class="section-title" style="margin-bottom:12px;">Upload Inspection Video</div>
+            <div class="upload-zone" onclick="document.getElementById('video-input').click()">
+              <div class="uz-icon">&#127916;</div>
+              <div class="uz-label">Tap to upload video</div>
+              <div class="uz-sub">MP4, MOV, AVI supported</div>
+              <input type="file" id="video-input" accept="video/*" style="display:none" onchange="handleVideo(this)"/>
+            </div>
+            <div id="video-preview" style="margin-top:14px;display:none;">
+              <video id="video-player" controls style="width:100%;border-radius:10px;max-height:300px;"></video>
+            </div>
+            <div class="ai-box">
+              <div class="ai-box-title">&#127908; Auto Transcription</div>
+              <p style="font-size:13px;color:#5b21b6;margin-bottom:14px;">Describe what was said or observed on the video. AI will produce a professional timestamped transcript.</p>
+              <div class="form-group"><label>Describe what was recorded / verbal observations</label>
+                <textarea id="v-notes" style="min-height:80px;" placeholder="e.g. Technician describes crack at junction, root intrusion visible, liner installed and cured, flow test passed"></textarea>
+              </div>
+              <button class="btn-ai" id="trans-btn" onclick="generateTranscript()">&#127908; Generate Transcript</button>
+              <div class="ai-loader" id="trans-loader">&#129302; Generating transcript...</div>
+              <div class="transcript-box" id="transcript-result"></div>
+              <div id="transcript-actions" style="display:none;gap:10px;margin-top:12px;flex-wrap:wrap;">
+                <button class="btn-secondary" onclick="copyTranscript()">Copy</button>
+                <button class="btn-save" onclick="showToast('Transcript added to job file')">Add to Job File</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMING SOON -->
+      <div class="page" id="page-leads"><div class="coming-soon"><div class="cs-icon">&#127919;</div><h3>Leads Tracker</h3><p>Track potential clients, follow-up dates, and conversion status.</p><div class="stage-badge">Coming in Stage 3</div></div></div>
+      <div class="page" id="page-invoices"><div class="coming-soon"><div class="cs-icon">&#128179;</div><h3>Invoicing</h3><p>Convert quotes to invoices and track payment status.</p><div class="stage-badge">Coming in Stage 4</div></div></div>
+      <div class="page" id="page-billing"><div class="coming-soon"><div class="cs-icon">&#128176;</div><h3>Billing &amp; Payments</h3><p>Track paid, unpaid and overdue accounts.</p><div class="stage-badge">Coming in Stage 4</div></div></div>
+      <div class="page" id="page-analytics"><div class="coming-soon"><div class="cs-icon">&#128200;</div><h3>Analytics Dashboard</h3><p>Jobs vs closed, revenue per month, outstanding and top clients.</p><div class="stage-badge">Coming in Stage 5</div></div></div>
+      <div class="page" id="page-media"><div class="coming-soon"><div class="cs-icon">&#128193;</div><h3>Media Library</h3><p>Store and organise job photos linked to external drives.</p><div class="stage-badge">Coming in Stage 2</div></div></div>
+      <div class="page" id="page-users"><div class="coming-soon"><div class="cs-icon">&#128101;</div><h3>User Management</h3><p>Manage access for technicians, partner, admin and invoicing roles.</p><div class="stage-badge">Coming in Stage 1 Full Build</div></div></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const USERS={admin:{name:'Marilize van den Heever',role:'Admin',initials:'M'},partner:{name:'Partner',role:'Partner',initials:'P'},technician:{name:'Technician',role:'Field Tech',initials:'T'}};
+let jobCounter=5, lineItems=[], reportType='field';
+
+function doLogin(){loginAs(document.getElementById('login-role').value);}
+function quickLogin(){loginAs('admin');}
+function loginAs(r){
+  const u=USERS[r];
+  document.getElementById('user-name').textContent=u.name;
+  document.getElementById('user-role').textContent=u.role;
+  document.getElementById('user-avatar').textContent=u.initials;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const t=new Date().toISOString().split('T')[0];
+  ['nj-date','q-date','r-date','v-date'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=t;});
+}
+function doLogout(){document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
+
+function showPage(n,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(ni=>ni.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+  if(el)el.classList.add('active');
+  const titles={dashboard:'Dashboard',jobs:'Jobs',newjob:'New Job',leads:'Leads',quotes:'Quote Builder',invoices:'Invoices',billing:'Billing',reports:'AI Reports',video:'Video & Transcribe',media:'Media Library',analytics:'Analytics',users:'Users'};
+  document.getElementById('page-title').textContent=titles[n]||n;
+  closeSidebar();
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay-bg').classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay-bg').classList.remove('show');}
+
+function saveNewJob(){
+  const c=document.getElementById('nj-client').value.trim();
+  if(!c){showToast('Please enter a client name');return;}
+  const d=document.getElementById('nj-date').value;
+  const tp=document.getElementById('nj-type').value;
+  const id='#SW-00'+jobCounter++;
+  document.getElementById('jobs-tbody').insertAdjacentHTML('afterbegin',`<tr><td><div class="client-name">${c}</div><div class="job-id">${id}</div></td><td>${tp}</td><td>${d}</td><td><span class="status-badge open"><span class="status-dot"></span>Open</span></td><td><button class="btn-action">Open</button></td></tr>`);
+  document.getElementById('alljobs-tbody').insertAdjacentHTML('afterbegin',`<tr><td>${id}</td><td><div class="client-name">${c}</div></td><td>${tp}</td><td>Husband</td><td>${d}</td><td><span class="status-badge open"><span class="status-dot"></span>Open</span></td><td><button class="btn-action">Open</button></td></tr>`);
+  ['nj-client','nj-address','nj-pipe','nj-notes'].forEach(id=>document.getElementById(id).value='');
+  showToast('Job '+id+' created for '+c);
+  showPage('jobs',null);
+}
+
+function addLineItem(){
+  const s=document.getElementById('service-select');
+  if(!s.value)return;
+  const p=s.value.split('|');
+  lineItems.push({desc:p[0],price:parseFloat(p[1]),qty:parseFloat(p[2]),unit:p[3]});
+  renderItems(); s.value='';
+}
+
+function renderItems(){
+  const tb=document.getElementById('line-items-body');
+  if(!lineItems.length){
+    tb.innerHTML='<tr id="empty-li"><td colspan="6" style="text-align:center;color:var(--text-light);padding:20px;font-size:13px;">Select a service above and click Add +</td></tr>';
+    document.getElementById('quote-total').textContent='Rs 0.00';
+    return;
+  }
+  let total=0;
+  tb.innerHTML=lineItems.map((it,i)=>{
+    const lt=it.price*it.qty; total+=lt;
+    return `<tr>
+      <td><input class="desc-input" type="text" value="${it.desc}" onchange="lineItems[${i}].desc=this.value"/></td>
+      <td style="font-size:12px;color:var(--text-light)">${it.unit}</td>
+      <td><input class="num-input" type="number" value="${it.qty}" min="0.1" step="0.5" onchange="lineItems[${i}].qty=parseFloat(this.value)||1;renderItems()"/></td>
+      <td><input class="num-input" type="number" value="${it.price}" min="0" onchange="lineItems[${i}].price=parseFloat(this.value)||0;renderItems()"/></td>
+      <td style="font-weight:600">Rs ${lt.toLocaleString('en',{minimumFractionDigits:2})}</td>
+      <td><button class="btn-remove" onclick="lineItems.splice(${i},1);renderItems()">x</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('quote-total').textContent='Rs '+total.toLocaleString('en',{minimumFractionDigits:2});
+}
+
+function clearQuote(){lineItems=[];renderItems();['q-client','q-ref','q-notes'].forEach(id=>document.getElementById(id).value='');}
+
+function printQuote(){
+  const c=document.getElementById('q-client').value||'Client';
+  const d=document.getElementById('q-date').value||new Date().toLocaleDateString();
+  const ref=document.getElementById('q-ref').value||'';
+  const notes=document.getElementById('q-notes').value||'';
+  if(!lineItems.length){showToast('Add at least one item first');return;}
+  const total=lineItems.reduce((s,i)=>s+i.price*i.qty,0);
+  const rows=lineItems.map(i=>`<tr><td>${i.desc}</td><td>${i.unit}</td><td>${i.qty}</td><td>Rs ${i.price.toLocaleString()}</td><td><strong>Rs ${(i.price*i.qty).toLocaleString('en',{minimumFractionDigits:2})}</strong></td></tr>`).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Quote - Simpliwater</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#0a2540;max-width:720px;margin:auto}h1{font-size:32px;letter-spacing:3px}h1 span{color:#1e90ff}.bar{height:3px;background:linear-gradient(90deg,#1e90ff,#00d4aa);width:80px;margin:8px 0 24px}table{width:100%;border-collapse:collapse;margin:20px 0}th{background:#0a2540;color:white;padding:10px;text-align:left;font-size:12px;text-transform:uppercase}td{padding:10px;border-bottom:1px solid #d0e4f5}.tot{text-align:right;font-size:24px;font-weight:700;margin-top:16px}.notes{background:#f4f9ff;padding:16px;border-radius:8px;font-size:13px;margin-top:20px}.hdr{display:flex;justify-content:space-between;margin-bottom:20px}@media print{body{padding:20px}}</style></head><body>
+  <h1>SIMPLI<span>WATER</span></h1><div class="bar"></div>
+  <div class="hdr"><div><strong>QUOTATION</strong><br/>${c}<br/><small>${ref}</small></div><div style="text-align:right">Date: ${d}<br/>Valid: 30 days</div></div>
+  <table><thead><tr><th>Description</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="tot">TOTAL: Rs ${total.toLocaleString('en',{minimumFractionDigits:2})} MUR</div>
+  ${notes?'<div class="notes"><strong>Notes:</strong><br/>'+notes+'</div>':''}
+  <script>window.print();<\/script></body></html>`);
+  w.document.close();
+}
+
+function switchTab(t,el){
+  reportType=t;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ai-result').classList.remove('show');
+  document.getElementById('report-actions').style.display='none';
+}
+
+async function generateReport(){
+  const notes=document.getElementById('r-notes').value.trim();
+  if(!notes){showToast('Add your field notes first');return;}
+  const c=document.getElementById('r-client').value||'Client';
+  const addr=document.getElementById('r-address').value||'Site';
+  const type=document.getElementById('r-type').value;
+  const diam=document.getElementById('r-diam').value||'N/A';
+  const len=document.getElementById('r-len').value||'N/A';
+  const d=document.getElementById('r-date').value||new Date().toLocaleDateString();
+  const typeMap={field:'a professional field inspection report',fault:'a detailed fault-finding analysis report',recommend:'a recommendations and remediation report'};
+  const prompt=`You are writing ${typeMap[reportType]} for Simpliwater, a CIPP pipe technician company.\n\nJob: Client: ${c}, Site: ${addr}, Date: ${d}, Work: ${type}, Pipe diameter: ${diam}, Length: ${len}\n\nTechnician field notes:\n${notes}\n\nWrite a professional report with clear headings: Site Overview, Observations/Findings, Work Performed, Conclusion. Write in third person. Be technical but readable. Do not invent facts not in the notes.`;
+  const btn=document.getElementById('gen-btn');
+  const loader=document.getElementById('ai-loader');
+  const result=document.getElementById('ai-result');
+  btn.disabled=true; loader.classList.add('show'); result.classList.remove('show');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data=await r.json();
+    result.textContent=data.content.map(c=>c.text||'').join('');
+    result.classList.add('show');
+    document.getElementById('report-actions').style.display='flex';
+  }catch(e){
+    result.textContent='Could not connect to AI. In the real app this generates automatically.';
+    result.classList.add('show');
+  }
+  btn.disabled=false; loader.classList.remove('show');
+}
+
+function copyReport(){navigator.clipboard.writeText(document.getElementById('ai-result').textContent);showToast('Report copied to clipboard');}
+
+function printReport(){
+  const text=document.getElementById('ai-result').textContent;
+  const c=document.getElementById('r-client').value||'';
+  const d=document.getElementById('r-date').value||'';
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Report - Simpliwater</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#0a2540;max-width:720px;margin:auto}h1{font-size:32px;letter-spacing:3px}h1 span{color:#1e90ff}.bar{height:3px;background:linear-gradient(90deg,#1e90ff,#00d4aa);width:80px;margin:8px 0 24px}pre{white-space:pre-wrap;font-family:Arial,sans-serif;line-height:1.7;font-size:14px}@media print{body{padding:20px}}</style></head><body><h1>SIMPLI<span>WATER</span></h1><div class="bar"></div><p><strong>${c}</strong> &mdash; ${d}</p><pre>${text}</pre><script>window.print();<\/script></body></html>`);
+  w.document.close();
+}
+
+function handleVideo(input){
+  if(input.files&&input.files[0]){
+    document.getElementById('video-player').src=URL.createObjectURL(input.files[0]);
+    document.getElementById('video-preview').style.display='block';
+    showToast('Video uploaded — add notes and generate transcript');
+  }
+}
+
+async function generateTranscript(){
+  const notes=document.getElementById('v-notes').value.trim();
+  if(!notes){showToast('Describe what was recorded first');return;}
+  const job=document.getElementById('v-job').value;
+  const prompt=`You are generating a professional timestamped video transcript for a CIPP pipe inspection recording. Job: ${job}.\n\nTechnician observations: "${notes}"\n\nWrite a realistic, professional video transcript with timestamps every 30 seconds (e.g. [0:00], [0:30]) covering the pipe inspection. Include technical observations about pipe condition, findings, and actions.`;
+  const btn=document.getElementById('trans-btn');
+  const loader=document.getElementById('trans-loader');
+  const result=document.getElementById('transcript-result');
+  btn.disabled=true; loader.classList.add('show'); result.classList.remove('show');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})});
+    const data=await r.json();
+    result.textContent=data.content.map(c=>c.text||'').join('');
+    result.classList.add('show');
+    document.getElementById('transcript-actions').style.display='flex';
+  }catch(e){
+    result.textContent='Could not connect. In the real app this transcribes automatically.';
+    result.classList.add('show');
+  }
+  btn.disabled=false; loader.classList.remove('show');
+}
+
+function copyTranscript(){navigator.clipboard.writeText(document.getElementById('transcript-result').textContent);showToast('Transcript copied');}
+function goReport(name){document.getElementById('r-client').value=name;showPage('reports',null);}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+</script>
+</body>
+</html>
