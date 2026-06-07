@@ -201,6 +201,76 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
   #print-area{display:block!important;padding:24px 32px;}
 }
 #print-area{display:none;}
+
+/* ── MOBILE RESPONSIVE ── */
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;}
+.hamburger svg{display:block;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,37,64,.5);z-index:99;backdrop-filter:blur(2px);}
+.sidebar-overlay.show{display:block;}
+
+@media(max-width:768px){
+  /* Sidebar slides in */
+  .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:200;}
+  .sidebar.open{transform:translateX(0);}
+  /* Main takes full width */
+  .main{margin-left:0;}
+  /* Topbar */
+  .topbar{padding:10px 14px;}
+  .topbar-title{font-size:15px;}
+  .topbar-pill{display:none;}
+  .hamburger{display:flex;align-items:center;justify-content:center;margin-right:8px;}
+  /* Topbar actions — icon-only on mobile */
+  .topbar-actions{gap:5px;}
+  .topbar-actions .btn{padding:7px 9px;font-size:11px;}
+  .btn-ghost.hide-mobile{display:none;}
+  /* Content padding */
+  .content{padding:14px 12px;}
+  /* Stats grid — 2 cols on mobile */
+  .stats-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  .stat-val{font-size:18px;}
+  /* Cards */
+  .card{padding:14px 14px;border-radius:10px;}
+  /* Forms — all single column */
+  .form-row.c2,.form-row.c3,.form-row.c4{grid-template-columns:1fr;}
+  /* Quote number pill full width */
+  .quote-num-pill{display:block;text-align:center;}
+  /* Line items table — card style on mobile */
+  .items-table thead{display:none;}
+  .items-table tr{display:block;background:#fff;border:1px solid var(--border-light);border-radius:10px;margin-bottom:10px;padding:12px;}
+  .items-table td{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border:none;font-size:12px;}
+  .items-table td:first-child{font-size:13px;font-weight:700;color:var(--navy);display:block;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border-light);}
+  .items-table td:before{content:attr(data-label);font-size:10px;font-weight:800;color:var(--text-light);text-transform:uppercase;letter-spacing:.7px;flex-shrink:0;margin-right:8px;}
+  .items-table td:last-child{justify-content:flex-end;}
+  .num-input{width:70px;}
+  /* Add panels stack */
+  .add-panel{flex-direction:column;align-items:stretch;}
+  .add-panel .form-group{max-width:100%!important;}
+  /* Totals layout */
+  .totals-layout{grid-template-columns:1fr;}
+  /* Banking grid */
+  .banking-grid{grid-template-columns:1fr;}
+  /* Signature lines */
+  .sig-lines{grid-template-columns:1fr;}
+  /* Quotes table — scroll horizontally */
+  .data-table{font-size:11px;}
+  .data-table th,.data-table td{padding:8px 8px;}
+  /* Users table scroll */
+  .users-table{font-size:11px;}
+  /* Action bar wrap */
+  .action-bar{flex-wrap:wrap;}
+  .action-bar .btn{flex:1;justify-content:center;min-width:120px;}
+  /* Client cards */
+  .client-card{grid-template-columns:38px 1fr;}
+  .client-card>div:last-child{display:none;}
+}
+
+@media(max-width:420px){
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .topbar-actions .btn span{display:none;}
+  .data-table th:nth-child(3),.data-table td:nth-child(3),
+  .data-table th:nth-child(4),.data-table td:nth-child(4){display:none;}
+}
+
 </style>
 </head>
 <body>
@@ -274,18 +344,26 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
   </div>
 </div>
 
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2.2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
       <div class="topbar-title" id="page-title">Quote Builder</div>
       <div class="topbar-pill" id="topbar-pill">New Quote</div>
     </div>
     <div class="topbar-actions" id="topbar-actions">
-      <button class="btn btn-ghost" onclick="clearQuote()">↺ Clear</button>
-      <button class="btn btn-ghost" onclick="saveAsDraft()">💾 Save Draft</button>
-      <button class="btn btn-outline" onclick="openStatusModal()">↕ Change Status</button>
-      <button class="btn btn-mustard" onclick="generatePDF()">🖨 Generate PDF</button>
+      <button class="btn btn-ghost hide-mobile" onclick="clearQuote()">↺ Clear</button>
+      <button class="btn btn-ghost" onclick="saveAsDraft()">💾 Draft</button>
+      <button class="btn btn-outline" onclick="openStatusModal()">↕ Status</button>
+      <button class="btn btn-mustard" onclick="generatePDF()">🖨 PDF</button>
     </div>
   </div>
   <div class="content">
@@ -716,11 +794,11 @@ function renderItems(){
     const lt=it.q*it.r,da=it.de?lt*it.dp/100:0,net=lt-da;
     return `<tr>
       <td><strong style="color:var(--navy);font-size:12px;">${it.d}</strong></td>
-      <td><input class="num-input" type="number" value="${it.q}" min="0.5" step="0.5" onchange="upQ(${i},this.value)"></td>
-      <td><input class="num-input" style="width:86px;" type="number" value="${it.r}" min="0" onchange="upR(${i},this.value)"></td>
-      <td style="color:var(--text-mid);">${fmtR(lt)}</td>
-      <td><label class="disc-toggle"><input type="checkbox" ${it.de?'checked':''} onchange="upDE(${i},this.checked)"><span>Apply discount</span></label>${it.de?`<div class="disc-inline"><input type="number" value="${it.dp}" min="0" max="100" onchange="upDP(${i},this.value)"><span>%</span></div>`:''}</td>
-      <td style="font-weight:800;font-size:12px;color:${da>0?'var(--mustard-dark)':'var(--text)'};">${fmtR(net)}</td>
+      <td data-label="Qty"><input class="num-input" type="number" value="${it.q}" min="0.5" step="0.5" onchange="upQ(${i},this.value)"></td>
+      <td data-label="Rate (MUR)"><input class="num-input" style="width:86px;" type="number" value="${it.r}" min="0" onchange="upR(${i},this.value)"></td>
+      <td data-label="Line Total" style="color:var(--text-mid);">${fmtR(lt)}</td>
+      <td data-label="Discount"><label class="disc-toggle"><input type="checkbox" ${it.de?'checked':''} onchange="upDE(${i},this.checked)"><span>Apply discount</span></label>${it.de?`<div class="disc-inline"><input type="number" value="${it.dp}" min="0" max="100" onchange="upDP(${i},this.value)"><span>%</span></div>`:''}</td>
+      <td data-label="Net Total" style="font-weight:800;font-size:12px;color:${da>0?'var(--mustard-dark)':'var(--text)'};">${fmtR(net)}</td>
       <td><button onclick="rmItem(${i})" style="background:none;border:none;cursor:pointer;color:#aac4de;font-size:20px;line-height:1;padding:0 4px;">×</button></td>
     </tr>`;
   }).join('');
@@ -1083,6 +1161,26 @@ function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3400);
 }
+
+// ── MOBILE SIDEBAR ────────────────────────────────────────────
+function toggleSidebar(){
+  const s=document.querySelector('.sidebar');
+  const o=document.getElementById('sidebar-overlay');
+  s.classList.toggle('open');
+  o.classList.toggle('show');
+  document.body.style.overflow=s.classList.contains('open')?'hidden':'';
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+  document.body.style.overflow='';
+}
+// Close sidebar when nav item clicked on mobile
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.addEventListener('click',()=>{if(window.innerWidth<=768)closeSidebar();});
+  });
+});
 </script>
 
 </body>
