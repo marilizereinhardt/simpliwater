@@ -224,9 +224,11 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
   </div>
   <div class="nav-section">
     <div class="nav-label">Main</div>
+    {% if user_perms.dashboard %}
     <a class="nav-item" onclick="showPage('dashboard')">
       <span class="nav-icon"><svg><use href="#ico-dashboard"/></svg></span>Dashboard
     </a>
+    {% endif %}
     <a class="nav-item" onclick="showPage('clients')">
       <span class="nav-icon"><svg><use href="#ico-clients"/></svg></span>Clients
     </a>
@@ -246,19 +248,29 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
     <a class="nav-item" onclick="showPage('reports')">
       <span class="nav-icon"><svg><use href="#ico-reports"/></svg></span>Reports
     </a>
+    {% if user_perms.price or user_perms.users %}
     <div class="nav-label">Admin</div>
+    {% if user_perms.price %}
     <a class="nav-item" onclick="showPage('price')">
       <span class="nav-icon"><svg><use href="#ico-price"/></svg></span>Price Schedule
     </a>
+    {% endif %}
+    {% if user_perms.users %}
     <a class="nav-item" onclick="showPage('users')">
       <span class="nav-icon"><svg><use href="#ico-users"/></svg></span>Users &amp; Permissions
     </a>
+    {% endif %}
+    {% endif %}
   </div>
   <div class="sidebar-footer">
     <div class="user-chip">
-      <div class="user-av">ML</div>
-      <div><div class="user-name">Marilize</div><div class="user-role">Admin</div></div>
+      <div class="user-av">{{ user_name[:2].upper() }}</div>
+      <div><div class="user-name">{{ user_name }}</div><div class="user-role">{{ user_role|capitalize }}</div></div>
     </div>
+    <a href="/logout" style="display:flex;align-items:center;gap:7px;padding:7px 10px;margin-top:6px;border-radius:8px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='rgba(255,255,255,.05)'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
   </div>
 </div>
 

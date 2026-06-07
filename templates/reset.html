@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimpliWater — New Password</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito Sans',sans-serif;background:linear-gradient(135deg,#0a2540 0%,#0d2d50 60%,#1a4a7a 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.login-wrap{width:100%;max-width:420px;padding:20px;}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;box-shadow:0 24px 60px rgba(0,0,0,.35);}
+.brand{text-align:center;margin-bottom:28px;}
+.brand-text{font-family:'Nunito',sans-serif;font-size:36px;font-weight:900;color:#0a2540;line-height:1;}
+.brand-text span{color:#7ec8e3;}
+.page-title{font-family:'Nunito',sans-serif;font-size:18px;font-weight:900;color:#0a2540;margin-bottom:6px;}
+.page-sub{font-size:12px;color:#6b8aaa;margin-bottom:20px;line-height:1.6;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:11px;font-weight:800;color:#3a5a7a;text-transform:uppercase;letter-spacing:.9px;margin-bottom:5px;}
+.form-group input{width:100%;padding:11px 14px;border:1.5px solid #c8dff0;border-radius:10px;font-family:'Nunito Sans',sans-serif;font-size:14px;color:#0d1f33;outline:none;transition:border-color .2s,box-shadow .2s;}
+.form-group input:focus{border-color:#2196f3;box-shadow:0 0 0 3px rgba(33,150,243,.12);}
+.btn-submit{width:100%;padding:13px;background:#e8a020;color:#0a2540;border:none;border-radius:10px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.btn-submit:hover{background:#c07a10;color:#fff;}
+.back-link{text-align:center;margin-top:16px;}
+.back-link a{font-size:12px;color:#1e6fbf;text-decoration:none;font-weight:600;}
+.error-msg{background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:16px;}
+.success-msg{background:#dcfce7;border:1px solid #86efac;color:#15803d;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:16px;}
+.hint{font-size:11px;color:#6b8aaa;margin-top:4px;}
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-text">Simpli<span>Water</span></div>
+    </div>
+    <div class="page-title">Set new password</div>
+    <div class="page-sub">Choose a strong password for your account.</div>
+    {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+    {% if success %}<div class="success-msg">{{ success }} <a href="/login" style="color:#15803d;font-weight:700;">Sign in →</a></div>{% endif %}
+    {% if not success %}
+    <form method="POST" action="/reset-password/{{ token }}">
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" name="password" placeholder="••••••••" required minlength="8">
+        <div class="hint">Minimum 8 characters</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" name="confirm" placeholder="••••••••" required minlength="8">
+      </div>
+      <button type="submit" class="btn-submit">Set Password →</button>
+    </form>
+    {% endif %}
+    <div class="back-link"><a href="/login">← Back to login</a></div>
+  </div>
+</div>
+</body>
+</html>

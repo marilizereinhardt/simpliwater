@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimpliWater — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito Sans',sans-serif;background:linear-gradient(135deg,#0a2540 0%,#0d2d50 60%,#1a4a7a 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.login-wrap{width:100%;max-width:420px;padding:20px;}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;box-shadow:0 24px 60px rgba(0,0,0,.35);}
+.brand{text-align:center;margin-bottom:32px;}
+.brand-text{font-family:'Nunito',sans-serif;font-size:36px;font-weight:900;color:#0a2540;line-height:1;}
+.brand-text span{color:#7ec8e3;}
+.brand-sub{font-size:10px;font-weight:800;color:#e8a020;text-transform:uppercase;letter-spacing:2px;margin-top:6px;display:inline-block;background:#fdf0d5;padding:3px 10px;border-radius:6px;border:1px solid rgba(232,160,32,.3);}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:11px;font-weight:800;color:#3a5a7a;text-transform:uppercase;letter-spacing:.9px;margin-bottom:5px;}
+.form-group input{width:100%;padding:11px 14px;border:1.5px solid #c8dff0;border-radius:10px;font-family:'Nunito Sans',sans-serif;font-size:14px;color:#0d1f33;outline:none;transition:border-color .2s,box-shadow .2s;}
+.form-group input:focus{border-color:#2196f3;box-shadow:0 0 0 3px rgba(33,150,243,.12);}
+.btn-login{width:100%;padding:13px;background:#e8a020;color:#0a2540;border:none;border-radius:10px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;cursor:pointer;transition:all .15s;margin-top:6px;letter-spacing:.3px;}
+.btn-login:hover{background:#c07a10;color:#fff;}
+.forgot-link{text-align:center;margin-top:16px;}
+.forgot-link a{font-size:12px;color:#1e6fbf;text-decoration:none;font-weight:600;}
+.forgot-link a:hover{text-decoration:underline;}
+.error-msg{background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:16px;display:none;}
+.error-msg.show{display:block;}
+.success-msg{background:#dcfce7;border:1px solid #86efac;color:#15803d;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:16px;display:none;}
+.success-msg.show{display:block;}
+.divider{text-align:center;font-size:11px;color:#6b8aaa;margin:8px 0 4px;}
+/* Reset password view */
+.view{display:none;}.view.active{display:block;}
+.back-link{font-size:12px;color:#1e6fbf;cursor:pointer;font-weight:600;margin-bottom:20px;display:inline-block;}
+.back-link:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-text">Simpli<span>Water</span></div>
+      <div class="brand-sub">⚙ Internal Portal</div>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <div class="view active" id="view-login">
+      <div class="error-msg" id="login-error"></div>
+      <form method="POST" action="/login" onsubmit="return validateLogin()">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" id="login-email" placeholder="your@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        {% if error %}
+        <div class="error-msg show">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="success-msg show">{{ success }}</div>
+        {% endif %}
+        <button type="submit" class="btn-login">Sign In →</button>
+      </form>
+      <div class="forgot-link">
+        <a href="/forgot-password">Forgot your password?</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+<script>
+function validateLogin(){
+  const e=document.getElementById('login-email').value;
+  const p=document.getElementById('login-password').value;
+  if(!e||!p){
+    const err=document.getElementById('login-error');
+    err.textContent='Please enter your email and password.';
+    err.classList.add('show');
+    return false;
+  }
+  return true;
+}
+</script>
+</body>
+</html>
