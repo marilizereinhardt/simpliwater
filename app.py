@@ -22,7 +22,7 @@ jobs = [
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('simpliwater_final.html')
 
 @app.route('/api/jobs', methods=['GET'])
 def get_jobs():
