@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimpliWater — Internal Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0a2540;--blue-dark:#1a4a7a;--blue-mid:#1e6fbf;--blue-bright:#2196f3;
+  --blue-steel:#4a7fa5;--blue-light:#b3d9f7;--blue-pale:#e3f2fd;--sky:#7ec8e3;
+  --mustard:#e8a020;--mustard-icon:#f0b840;--mustard-light:#fdf0d5;--mustard-dark:#c07a10;
+  --surface:#f0f6fc;--white:#fff;--text:#0d1f33;--text-mid:#3a5a7a;
+  --text-light:#6b8aaa;--border:#c8dff0;--border-light:#deeef8;
+  --row-draft:#f5f3ff;--row-complete:#eff8ff;--row-sent:#e8f4ff;
+  --row-accepted:#f0faf4;--row-rejected:#fff5f5;--row-hold:#fffbf0;--row-job:#f0fafd;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;top:0;left:0;width:234px;height:100vh;background:linear-gradient(180deg,#0a2540 0%,#0d2d50 60%,#0a2540 100%);display:flex;flex-direction:column;z-index:100;}
+.sidebar-brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.15);}
+.brand-text{font-family:'Nunito',sans-serif;font-size:27px;font-weight:900;color:#fff;line-height:1.1;}
+.brand-text span{color:var(--sky);}
+.brand-sub{font-size:9px;font-weight:800;color:var(--mustard);text-transform:uppercase;letter-spacing:2px;margin-top:5px;background:rgba(232,160,32,.12);display:inline-block;padding:2px 8px;border-radius:4px;border:1px solid rgba(232,160,32,.22);}
+.nav-section{padding:10px 8px;flex:1;overflow-y:auto;}
+.nav-label{font-size:9px;font-weight:800;color:rgba(255,255,255,.22);text-transform:uppercase;letter-spacing:2px;padding:0 10px;margin:14px 0 5px;}
+.nav-label:first-child{margin-top:5px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.52);font-size:13px;font-weight:600;margin-bottom:2px;text-decoration:none;transition:all .15s;border-left:3px solid transparent;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);}
+.nav-item.active{background:rgba(33,150,243,.16);color:#fff;border-left-color:var(--mustard);}
+.nav-icon{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.nav-icon svg{width:17px;height:17px;stroke:var(--mustard-icon);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.nav-badge{margin-left:auto;background:var(--mustard);color:var(--navy);font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;}
+.sidebar-footer{padding:12px 10px;border-top:1px solid rgba(255,255,255,.07);}
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.06);}
+.user-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue-bright),var(--mustard));color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;}
+.user-name{font-size:12px;font-weight:700;color:rgba(255,255,255,.8);}
+.user-role{font-size:10px;color:var(--mustard);font-weight:600;}
+
+/* ── MAIN ── */
+.main{margin-left:234px;min-height:100vh;}
+.topbar{background:#fff;padding:12px 26px;border-bottom:3px solid var(--mustard);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-title{font-size:17px;font-weight:900;color:var(--navy);font-family:'Nunito',sans-serif;}
+.topbar-pill{background:var(--mustard-light);color:var(--mustard-dark);font-size:10px;font-weight:800;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:1px;border:1px solid rgba(232,160,32,.3);}
+.topbar-actions{display:flex;gap:7px;align-items:center;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--blue-bright);color:#fff;}.btn-primary:hover{background:var(--blue-mid);}
+.btn-mustard{background:var(--mustard);color:var(--navy);}.btn-mustard:hover{background:var(--mustard-dark);color:#fff;}
+.btn-outline{background:#fff;color:var(--blue-mid);border:1.5px solid var(--blue-bright);}.btn-outline:hover{background:var(--blue-pale);}
+.btn-ghost{background:var(--blue-pale);color:var(--blue-mid);border:1.5px solid var(--border);}.btn-ghost:hover{background:#daeeff;}
+.btn-green{background:#16a34a;color:#fff;}.btn-green:hover{background:#15803d;}
+.btn-sm{padding:5px 11px;font-size:11px;}
+.btn-xs{padding:4px 9px;font-size:10px;font-weight:700;}
+.content{padding:20px 26px;}
+.page{display:none;}.page.active{display:block;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:14px;border:1px solid var(--border-light);padding:20px 22px;margin-bottom:16px;box-shadow:0 1px 4px rgba(10,37,64,.04);}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:15px;padding-bottom:11px;border-bottom:2px solid var(--blue-pale);}
+.step-badge{width:24px;height:24px;border-radius:50%;background:var(--mustard);color:var(--navy);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Nunito',sans-serif;}
+.card-title{font-size:13px;font-weight:900;color:var(--navy);font-family:'Nunito',sans-serif;}
+.section-pill{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--blue-pale);color:var(--blue-mid);}
+
+/* ── FORMS ── */
+.form-row{display:grid;gap:11px;margin-bottom:11px;}
+.c2{grid-template-columns:1fr 1fr;}.c3{grid-template-columns:1fr 1fr 1fr;}.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group label{font-size:10px;font-weight:800;color:var(--text-mid);text-transform:uppercase;letter-spacing:.9px;}
+.opt-lbl{font-weight:600;text-transform:none;font-size:10px;color:var(--text-light);}
+.form-group input,.form-group select,.form-group textarea{padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:13px;color:var(--text);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(33,150,243,.1);}
+.form-group textarea{resize:vertical;min-height:72px;line-height:1.6;}
+.quote-num-pill{padding:8px 13px;border:2px solid var(--mustard);border-radius:8px;font-size:14px;font-weight:900;color:var(--mustard-dark);background:var(--mustard-light);letter-spacing:1px;font-family:'Nunito',sans-serif;}
+
+/* ── ITEMS TABLE ── */
+.items-table{width:100%;border-collapse:collapse;}
+.items-table th{padding:8px 9px;text-align:left;font-size:10px;font-weight:800;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.8px;background:var(--blue-pale);border-bottom:2px solid var(--border);}
+.items-table td{padding:7px 9px;border-bottom:1px solid var(--border-light);vertical-align:middle;font-size:12px;}
+.items-table tr:hover td{background:#f5faff;}
+.empty-row td{text-align:center;color:var(--text-light);padding:22px;font-size:13px;}
+.num-input{width:62px;padding:5px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:right;font-family:'Nunito Sans',sans-serif;outline:none;}
+.num-input:focus{border-color:var(--blue-bright);}
+.disc-toggle{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--text-light);}
+.disc-toggle input[type=checkbox]{accent-color:var(--mustard);cursor:pointer;width:13px;height:13px;}
+.disc-inline{display:flex;align-items:center;gap:4px;margin-top:3px;}
+.disc-inline input{width:52px;padding:4px 6px;border:1.5px solid var(--mustard);border-radius:6px;font-size:11px;background:var(--mustard-light);color:var(--mustard-dark);text-align:right;outline:none;}
+.disc-inline span{font-size:11px;color:var(--mustard-dark);font-weight:700;}
+.add-panel{display:flex;gap:9px;align-items:flex-end;margin-top:11px;padding:11px 13px;border-radius:10px;border:1px dashed var(--border);}
+.cat-panel{background:var(--blue-pale);}
+.custom-panel{background:var(--mustard-light);border-color:rgba(232,160,32,.4);}
+.add-panel .form-group{flex:1;margin:0;}
+.save-chk{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--blue-mid);cursor:pointer;font-weight:700;margin-bottom:4px;}
+.save-chk input{accent-color:var(--blue-bright);}
+
+/* ── TOTALS ── */
+.totals-layout{display:grid;grid-template-columns:1fr 295px;gap:18px;align-items:start;}
+.totals-box{background:var(--navy);color:#fff;border-radius:12px;padding:17px 19px;}
+.totals-box table{width:100%;}
+.totals-box td{padding:5px 0;font-size:13px;color:rgba(255,255,255,.85);}
+.totals-box td:last-child{text-align:right;font-weight:700;}
+.tr-disc td{color:#ffd06b;}.tr-vat td{color:var(--sky);}
+.tr-final{border-top:1px solid rgba(255,255,255,.2);}
+.tr-final td{padding-top:9px;font-size:15px;color:#fff;}
+.disc-note{font-size:12px;color:var(--text-light);line-height:1.65;}
+.overall-disc-row{display:flex;align-items:center;gap:9px;margin-bottom:13px;}
+.overall-disc-row label{font-size:12px;font-weight:700;color:rgba(255,255,255,.9);}
+.overall-disc-row input{width:70px;padding:6px 9px;border:1.5px solid rgba(255,255,255,.28);border-radius:7px;font-size:13px;font-weight:700;background:rgba(255,255,255,.14);color:#fff;text-align:right;}
+.overall-disc-row input::placeholder{color:rgba(255,255,255,.3);}
+.overall-disc-row input:focus{outline:none;border-color:var(--mustard);background:rgba(255,255,255,.2);}
+.overall-disc-row span{font-size:13px;color:rgba(255,255,255,.7);font-weight:700;}
+
+/* ── BANKING ── */
+.banking-grid{display:grid;grid-template-columns:1fr 1fr;}
+.b-item{padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;}
+.b-lbl{font-size:10px;font-weight:800;color:var(--text-light);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:1px;}
+.b-val{font-weight:600;color:var(--text);}
+
+/* ── SIG & DISCLAIMER ── */
+.sig-block{border:2px dashed var(--border);border-radius:12px;padding:15px 18px;background:var(--blue-pale);}
+.sig-lines{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:13px;}
+.sig-line{border-bottom:1.5px solid var(--text-mid);height:28px;}
+.sig-lbl{font-size:10px;font-weight:800;color:var(--text-light);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
+.disc-box{border-radius:10px;padding:12px 15px;font-size:12px;line-height:1.75;margin-bottom:9px;}
+.disc-equip{background:#fff8e6;border:1px solid #f0cc80;color:#7a4f00;}
+.disc-pay{background:#e8f8f1;border:1px solid #90d4b0;color:#145a35;}
+.disc-box strong{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px;opacity:.6;}
+.validity-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 13px;border-radius:20px;background:var(--mustard-light);color:var(--mustard-dark);font-size:11px;font-weight:800;border:1px solid rgba(232,160,32,.38);margin-bottom:11px;font-family:'Nunito',sans-serif;}
+.action-bar{display:flex;gap:7px;justify-content:flex-end;padding-top:9px;flex-wrap:wrap;}
+
+/* ── DATA TABLE ── */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.8px;background:var(--blue-pale);border-bottom:2px solid var(--border);}
+.data-table td{padding:9px 12px;font-size:12px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+.data-table tr.row-draft td{background:var(--row-draft);}
+.data-table tr.row-complete td{background:var(--row-complete);}
+.data-table tr.row-sent td{background:var(--row-sent);}
+.data-table tr.row-accepted td{background:var(--row-accepted);}
+.data-table tr.row-rejected td{background:var(--row-rejected);}
+.data-table tr.row-hold td{background:var(--row-hold);}
+.data-table tr.row-job td{background:var(--row-job);}
+.sbadge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.s-draft{background:#ede9fe;color:#5b21b6;}.s-complete{background:#dbeafe;color:#1d4ed8;}
+.s-sent{background:#e0f2fe;color:#0369a1;}.s-accepted{background:#dcfce7;color:#15803d;}
+.s-rejected{background:#fee2e2;color:#b91c1c;}.s-hold{background:#fef3c7;color:#92400e;}
+.s-job{background:#cffafe;color:#0e7490;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:12px;padding:15px 17px;border:1px solid var(--border-light);border-top:3px solid var(--mustard);}
+.stat-val{font-size:24px;font-weight:900;color:var(--navy);font-family:'Nunito',sans-serif;line-height:1.1;}
+.stat-lbl{font-size:11px;color:var(--text-light);margin-top:2px;font-weight:600;}
+
+/* ── CLIENTS ── */
+.client-card{background:#fff;border-radius:12px;border:1px solid var(--border-light);padding:14px 17px;display:grid;grid-template-columns:42px 1fr auto;gap:13px;align-items:center;margin-bottom:9px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.client-card:hover{border-left-color:var(--mustard);box-shadow:0 3px 12px rgba(10,37,64,.07);}
+.client-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--blue-mid),var(--sky));color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;}
+.client-name{font-weight:900;font-size:14px;color:var(--navy);font-family:'Nunito',sans-serif;}
+.client-meta{font-size:11px;color:var(--text-light);margin-top:2px;}
+
+/* ── USERS ── */
+.users-table{width:100%;border-collapse:collapse;}
+.users-table th{padding:9px 13px;text-align:left;font-size:10px;font-weight:800;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.8px;background:var(--blue-pale);border-bottom:2px solid var(--border);}
+.users-table td{padding:10px 13px;font-size:13px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+.perm-toggle{position:relative;display:inline-block;width:36px;height:20px;}
+.perm-toggle input{opacity:0;width:0;height:0;}
+.perm-slider{position:absolute;cursor:pointer;inset:0;background:#c0d4e8;border-radius:20px;transition:.2s;}
+.perm-slider:before{position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+.perm-toggle input:checked+.perm-slider{background:var(--mustard);}
+.perm-toggle input:checked+.perm-slider:before{transform:translateX(16px);}
+
+/* ── PRICE SCHEDULE ── */
+.price-table{width:100%;border-collapse:collapse;}
+.price-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.8px;background:var(--blue-pale);border-bottom:2px solid var(--border);}
+.price-table td{padding:8px 12px;font-size:13px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+.price-table tr:hover td{background:#f5faff;}
+.rate-edit{width:110px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:right;font-family:'Nunito Sans',sans-serif;outline:none;background:#fff;}
+.rate-edit:focus{border-color:var(--mustard);box-shadow:0 0 0 2px rgba(232,160,32,.12);}
+.rate-zero{color:var(--text-light);font-style:italic;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,37,64,.58);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-box{background:#fff;border-radius:16px;padding:26px 28px;max-width:420px;width:92%;box-shadow:0 20px 60px rgba(10,37,64,.28);border-top:4px solid var(--mustard);}
+.modal-title{font-family:'Nunito',sans-serif;font-size:18px;font-weight:900;color:var(--navy);margin-bottom:7px;}
+.modal-sub{font-size:13px;color:var(--text-light);margin-bottom:16px;line-height:1.55;}
+.modal-opts{display:grid;gap:7px;margin-bottom:14px;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--navy);color:#fff;padding:10px 18px;border-radius:10px;font-size:12px;font-weight:700;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;border-left:3px solid var(--mustard);}
+#toast.show{opacity:1;transform:translateY(0);}
+
+/* ── PRINT ── */
+@media print{
+  .sidebar,.topbar,.action-bar,.add-panel,.no-print{display:none!important;}
+  .main{margin-left:0!important;}
+  .content{padding:0!important;}
+  body{background:#fff!important;font-size:12px;}
+  .page{display:none!important;}
+  #print-area{display:block!important;}
+  .card{box-shadow:none!important;border:none!important;page-break-inside:avoid;}
+}
+#print-area{display:none;}
+</style>
+</head>
+<body>
+<!-- SVG ICON DEFS -->
+<svg style="display:none">
+  <symbol id="ico-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="ico-clients" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+  <symbol id="ico-builder" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></symbol>
+  <symbol id="ico-quotes" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></symbol>
+  <symbol id="ico-jobs" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="ico-reports" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></symbol>
+  <symbol id="ico-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ico-price" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></symbol>
+</svg>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-text">Simpli<span>Water</span></div>
+    <div class="brand-sub">⚙ Internal Portal</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" onclick="showPage('dashboard')">
+      <span class="nav-icon"><svg><use href="#ico-dashboard"/></svg></span>Dashboard
+    </a>
+    <a class="nav-item" onclick="showPage('clients')">
+      <span class="nav-icon"><svg><use href="#ico-clients"/></svg></span>Clients
+    </a>
+    <div class="nav-label">Quoting</div>
+    <a class="nav-item active" onclick="showPage('builder')">
+      <span class="nav-icon"><svg><use href="#ico-builder"/></svg></span>Quote Builder
+    </a>
+    <a class="nav-item" onclick="showPage('quotes')">
+      <span class="nav-icon"><svg><use href="#ico-quotes"/></svg></span>Quotes
+      <span class="nav-badge">7</span>
+    </a>
+    <div class="nav-label">Field</div>
+    <a class="nav-item" onclick="showPage('jobs')">
+      <span class="nav-icon"><svg><use href="#ico-jobs"/></svg></span>Jobs
+      <span class="nav-badge">3</span>
+    </a>
+    <a class="nav-item" onclick="showPage('reports')">
+      <span class="nav-icon"><svg><use href="#ico-reports"/></svg></span>Reports
+    </a>
+    <div class="nav-label">Admin</div>
+    <a class="nav-item" onclick="showPage('price')">
+      <span class="nav-icon"><svg><use href="#ico-price"/></svg></span>Price Schedule
+    </a>
+    <a class="nav-item" onclick="showPage('users')">
+      <span class="nav-icon"><svg><use href="#ico-users"/></svg></span>Users &amp; Permissions
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-av">ML</div>
+      <div><div class="user-name">Marilize</div><div class="user-role">Admin</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="page-title">Quote Builder</div>
+      <div class="topbar-pill" id="topbar-pill">New Quote</div>
+    </div>
+    <div class="topbar-actions" id="topbar-actions">
+      <button class="btn btn-ghost" onclick="clearQuote()">↺ Clear</button>
+      <button class="btn btn-ghost" onclick="saveAsDraft()">💾 Save Draft</button>
+      <button class="btn btn-outline" onclick="openStatusModal()">↕ Change Status</button>
+      <button class="btn btn-mustard" onclick="generatePDF()">🖨 Generate PDF</button>
+    </div>
+  </div>
+  <div class="content">
+  <!-- DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="stats-grid">
+      <div class="stat-card"><div style="font-size:22px;margin-bottom:5px;">📊</div><div class="stat-val">24</div><div class="stat-lbl">Total Quotes</div></div>
+      <div class="stat-card"><div style="font-size:22px;margin-bottom:5px;">✅</div><div class="stat-val">Rs 420,500</div><div class="stat-lbl">Accepted (MTD)</div></div>
+      <div class="stat-card"><div style="font-size:22px;margin-bottom:5px;">🔩</div><div class="stat-val">8</div><div class="stat-lbl">Active Jobs</div></div>
+      <div class="stat-card"><div style="font-size:22px;margin-bottom:5px;">⏳</div><div class="stat-val">Rs 182,000</div><div class="stat-lbl">Pending Quotes</div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">Revenue & Pipeline</div></div>
+      <p style="color:var(--text-light);font-size:13px;">Full analytics available once database integration is complete.</p></div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="page" id="page-clients">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;">
+      <span style="font-size:13px;color:var(--text-light);font-weight:600;">3 clients on record</span>
+      <button class="btn btn-mustard" onclick="showToast('Add client — Phase 2')">+ New Client</button>
+    </div>
+    <div class="client-card"><div class="client-av">TS</div>
+      <div><div class="client-name">Tim Straw</div>
+        <div class="client-meta">Calodyne · (+230) 5458 0126 · tim.straw@email.com</div>
+        <div class="client-meta">📍 Calodyne, Mauritius · VAT: — · BRN: —</div></div>
+      <div style="text-align:right;"><strong style="font-size:18px;font-weight:900;color:var(--mustard-dark);font-family:'Nunito',sans-serif;">2</strong><div style="font-size:11px;color:var(--text-light);">quotes · 1 job</div></div>
+    </div>
+    <div class="client-card"><div class="client-av">BV</div>
+      <div><div class="client-name">Residencia Belle Vue</div>
+        <div class="client-meta">Commercial · (+230) 5912 3456 · bv@bellevue.mu</div>
+        <div class="client-meta">📍 Grand Baie · VAT: 28091234 · BRN: C221XXXXX</div></div>
+      <div style="text-align:right;"><strong style="font-size:18px;font-weight:900;color:var(--mustard-dark);font-family:'Nunito',sans-serif;">5</strong><div style="font-size:11px;color:var(--text-light);">quotes · 3 jobs</div></div>
+    </div>
+    <div class="client-card"><div class="client-av">TV</div>
+      <div><div class="client-name">Tamarin Villas</div>
+        <div class="client-meta">Residential · (+230) 5867 9100 · info@tamarinvillas.mu</div>
+        <div class="client-meta">📍 Tamarin · VAT: — · BRN: —</div></div>
+      <div style="text-align:right;"><strong style="font-size:18px;font-weight:900;color:var(--mustard-dark);font-family:'Nunito',sans-serif;">3</strong><div style="font-size:11px;color:var(--text-light);">quotes · 2 jobs</div></div>
+    </div>
+  </div>
+
+  <!-- QUOTES LIST -->
+  <div class="page" id="page-quotes">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="data-table"><thead>
+        <tr><th>Quote #</th><th>Client</th><th>Type</th><th>Date</th><th>Amount (MUR)</th><th>Status</th><th>Actions</th></tr>
+      </thead><tbody id="quotes-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- JOBS -->
+  <div class="page" id="page-jobs">
+    <div class="card"><div class="card-header"><div class="card-title">Active Jobs</div></div>
+      <p style="color:var(--text-light);font-size:13px;">Statuses: Job Created → Job Open → Job Closed / Job On Hold. Full job form — Phase 2.</p></div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="page" id="page-reports">
+    <div class="card"><div class="card-header"><div class="card-title">Reports</div></div>
+      <p style="color:var(--text-light);font-size:13px;">AI-generated and manual PDF reports — Phase 3.</p></div>
+  </div>
+
+  <!-- PRICE SCHEDULE -->
+  <div class="page" id="page-price">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Price Schedule</div>
+        <span class="section-pill">Admin Only</span>
+        <button class="btn btn-green btn-sm no-print" onclick="exportExcel()" style="margin-left:10px;">⬇ Export to Excel</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:14px;">Edit rates inline — changes apply to new quotes immediately. Zero rates indicate project-specific pricing agreed with client.</p>
+      <div style="overflow-x:auto;">
+        <table class="price-table" id="price-table">
+          <thead><tr><th>#</th><th>Item Description</th><th>Current Rate (MUR excl. VAT)</th><th>Last Updated</th></tr></thead>
+          <tbody id="price-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS & PERMISSIONS -->
+  <div class="page" id="page-users">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Users &amp; Access Permissions</div><span class="section-pill">Admin Only</span></div>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:15px;">Toggle which sections each user can access. Changes take effect on the live system once database is connected.</p>
+      <div style="overflow-x:auto;">
+        <table class="users-table"><thead>
+          <tr><th>User</th><th>Role</th><th>Dashboard</th><th>Clients</th><th>Quotes</th><th>Jobs</th><th>Reports</th><th>Price Schedule</th><th>Users &amp; Perms</th></tr>
+        </thead><tbody id="users-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <!-- QUOTE BUILDER -->
+  <div class="page active" id="page-builder">
+    <div class="card">
+      <div class="card-header"><div class="step-badge">1</div><div class="card-title">Client & Site Details</div></div>
+      <div class="form-row c2">
+        <div class="form-group"><label>Client Name</label>
+          <select id="q-client" onchange="onClientChange()">
+            <option value="">— Select existing client —</option>
+            <option value="TS">Tim Straw — Calodyne</option>
+            <option value="BV">Residencia Belle Vue</option>
+            <option value="TV">Tamarin Villas</option>
+            <option value="new">+ Add New Client…</option>
+          </select>
+        </div>
+        <div class="form-group" id="new-client-wrap" style="display:none;"><label>New Client Name</label><input type="text" id="q-new-client" placeholder="Full name or company"></div>
+        <div class="form-group"><label>Site Address</label><select id="q-address" onchange="onAddressChange()"><option value="">— Select client first —</option></select></div>
+      </div>
+      <div class="form-row" id="new-addr-wrap" style="display:none;">
+        <div class="form-group"><label>New Address <span class="opt-lbl">(saved to client record)</span></label><input type="text" id="q-new-address" placeholder="Enter full site address"></div>
+      </div>
+      <div class="form-row c4">
+        <div class="form-group"><label>Contact Person</label><input type="text" id="q-contact" placeholder="Full name"></div>
+        <div class="form-group"><label>Phone</label><input type="text" id="q-phone" placeholder="(+230) XXXX XXXX"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="q-email" placeholder="client@email.com"></div>
+        <div></div>
+      </div>
+      <div class="form-row c4">
+        <div class="form-group"><label>VAT Number <span class="opt-lbl">(optional)</span></label><input type="text" id="q-vat" placeholder="e.g. 28024189"></div>
+        <div class="form-group"><label>BRN <span class="opt-lbl">(optional)</span></label><input type="text" id="q-brn" placeholder="e.g. C22186732"></div>
+        <div></div><div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">2</div><div class="card-title">Job Type & Quote Reference</div></div>
+      <div class="form-row c4">
+        <div class="form-group"><label>Job Type</label>
+          <select id="q-type" onchange="genQuoteNum()">
+            <option value="">— Select type —</option>
+            <option value="CCTV">CCTV</option><option value="EBC">EBC</option>
+            <option value="CIPP">CIPP</option><option value="HYDRO">HYDRO</option>
+            <option value="PAC">PAC</option><option value="GAL">GAL</option>
+            <option value="GP">GP</option><option value="WEBC">WEBC</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Quote Number</label><div class="quote-num-pill" id="q-num">Select type →</div></div>
+        <div class="form-group"><label>Quote Date</label><input type="date" id="q-date"></div>
+        <div class="form-group"><label>Valid Until (14 days)</label><input type="date" id="q-valid" readonly style="background:var(--blue-pale);color:var(--blue-mid);cursor:default;"></div>
+      </div>
+      <div class="form-row"><div class="form-group"><label>Scope of Work</label><textarea id="q-scope" placeholder="Brief description of the job scope…" rows="3"></textarea></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">3</div><div class="card-title">Line Items</div><span class="section-pill">All items available for any job type</span></div>
+      <table class="items-table"><thead><tr>
+        <th style="width:33%">Description</th><th style="width:8%">Qty</th>
+        <th style="width:14%">Unit Rate (MUR)</th><th style="width:13%">Line Total</th>
+        <th style="width:17%">Discount</th><th style="width:12%">Net Total</th><th style="width:3%"></th>
+      </tr></thead><tbody id="items-body"></tbody></table>
+      <div class="add-panel cat-panel">
+        <div class="form-group"><label style="color:var(--blue-mid);">Add from service line items</label><select id="cat-select"><option value="">— Select item —</option></select></div>
+        <button class="btn btn-outline" onclick="addCatalogueItem()" style="white-space:nowrap;flex-shrink:0;">+ Add Item</button>
+      </div>
+      <div class="add-panel custom-panel">
+        <div class="form-group"><label style="color:var(--mustard-dark);">Custom description</label><input type="text" id="custom-desc" placeholder="Describe the custom item…"></div>
+        <div class="form-group" style="max-width:115px;"><label style="color:var(--mustard-dark);">Rate (MUR)</label><input type="number" id="custom-rate" placeholder="0.00" min="0"></div>
+        <div style="flex-shrink:0;"><label class="save-chk"><input type="checkbox" id="save-custom"> Save to price schedule</label><button class="btn btn-mustard" onclick="addCustomItem()">+ Add Custom</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">4</div><div class="card-title">Pricing Summary</div></div>
+      <div class="totals-layout">
+        <div><p class="disc-note">Line-item discounts apply first (tick checkbox per row). The overall discount applies to the subtotal after line discounts, before 15% VAT. If no discount is applied, none will appear on the printed quote.</p></div>
+        <div class="totals-box">
+          <div class="overall-disc-row"><label>Overall discount</label><input type="number" id="overall-disc" placeholder="0" min="0" max="100" oninput="calcTotals()"><span>%</span></div>
+          <table>
+            <tr><td>Subtotal (excl. VAT)</td><td id="td-sub">Rs 0.00</td></tr>
+            <tr class="tr-disc" id="tr-ld" style="display:none;"><td>↳ Line discounts</td><td id="td-ld">Rs 0.00</td></tr>
+            <tr class="tr-disc" id="tr-od" style="display:none;"><td>↳ Overall discount</td><td id="td-od">Rs 0.00</td></tr>
+            <tr id="tr-ad" style="display:none;"><td style="color:rgba(255,255,255,.5);font-size:12px;">After discounts</td><td id="td-ad">Rs 0.00</td></tr>
+            <tr class="tr-vat"><td>VAT (15%)</td><td id="td-vat">Rs 0.00</td></tr>
+            <tr class="tr-final"><td><strong>Total (incl. VAT)</strong></td><td id="td-total"><strong>Rs 0.00</strong></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">5</div><div class="card-title">Terms & Conditions</div></div>
+      <div class="validity-badge">📅 Valid for 14 days from quote date</div>
+      <div class="form-group"><label>Standard T&Cs <span class="opt-lbl">(editable per quote)</span></label>
+        <textarea id="q-tc" rows="8" style="font-size:12px;line-height:1.7;">• The rate supplied includes labour, travel time × 1 trip, and a report of findings. Standing time due to no access to property / inspection ducts / plant rooms and client delays will be charged at Rs 1,500.00 per hour additional.
+
+• The project is weather permitting.
+
+• The client must ensure electricity on site with a working plug point, and a water supply on the day.
+
+• SimpliWater Ltd provides a 1-year warranty on completed works.
+
+• The client is responsible for ensuring access to the site on the agreed date.</textarea>
+      </div>
+      <div class="form-group" style="margin-top:10px;"><label>Additional / Project-Specific Terms <span class="opt-lbl">(optional)</span></label>
+        <textarea id="q-tc-extra" rows="3" placeholder="Any additional terms specific to this quote…"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">6</div><div class="card-title">Payment Terms & Banking</div></div>
+      <div class="form-row c2" style="margin-bottom:15px;">
+        <div class="form-group"><label>Payment Terms</label><input type="text" id="q-pay-terms" value="75% upfront · 25% of project commencement (COD)"></div>
+        <div class="form-group"><label>Additional Notes</label><input type="text" id="q-pay-notes" placeholder="e.g. EFT or cash accepted"></div>
+      </div>
+      <div class="banking-grid">
+        <div>
+          <div class="b-item"><span class="b-lbl">Bank</span><span class="b-val">ABSA Bank (Mauritius) Ltd</span></div>
+          <div class="b-item"><span class="b-lbl">Account Name</span><span class="b-val">SIMPLIWATER LTD</span></div>
+          <div class="b-item"><span class="b-lbl">Account Number</span><span class="b-val">25 200 8349</span></div>
+        </div>
+        <div>
+          <div class="b-item"><span class="b-lbl">IBAN</span><span class="b-val">MU21BARC0325000002008349</span></div>
+          <div class="b-item"><span class="b-lbl">Swift Code</span><span class="b-val">BARCMUMUMA</span></div>
+          <div class="b-item"><span class="b-lbl">Branch</span><span class="b-val">ABSA House, 68-68A Cybercity Ebène</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">7</div><div class="card-title">Client Acknowledgment</div></div>
+      <div class="sig-block">
+        <p style="font-size:13px;line-height:1.7;">I, ________________________________, have read, understood, and agreed to the terms and conditions, payment terms, and all conditions stated in this quotation.</p>
+        <div class="sig-lines">
+          <div><div class="sig-line"></div><div class="sig-lbl">Signature</div></div>
+          <div><div class="sig-line"></div><div class="sig-lbl">Date</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="step-badge">8</div><div class="card-title">Disclaimers</div></div>
+      <div class="disc-box disc-equip"><strong>Equipment Retrieval Disclaimer</strong>In the event that SimpliWater Ltd's equipment becomes lodged or stuck within the client's drainage system, SimpliWater Ltd reserves the right to undertake excavation or other necessary measures to retrieve it. The client acknowledges that retrieval may cause damage to surrounding property or infrastructure. SimpliWater Ltd shall not be held liable for such damage and will charge the client for all associated costs. Excavation rates (excl. materials): Rs 3,500.00/hr.</div>
+      <div class="disc-box disc-pay"><strong>Payment & Automatic Acceptance</strong>Receipt of proof of payment constitutes automatic acceptance of this quotation and all associated terms, conditions, and payment terms stated herein.</div>
+      <div class="action-bar no-print">
+        <button class="btn btn-ghost" onclick="clearQuote()">↺ Clear Form</button>
+        <button class="btn btn-ghost" onclick="saveAsDraft()">💾 Save Draft</button>
+        <button class="btn btn-outline" onclick="openStatusModal()">↕ Change Status</button>
+        <button class="btn btn-mustard" onclick="generatePDF()">🖨 Generate PDF</button>
+      </div>
+    </div>
+  </div><!-- /builder -->
+  </div><!-- /content -->
+</div><!-- /main -->
+<!-- STATUS MODAL -->
+<div id="status-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-title">Update Quote Status</div>
+    <div class="modal-sub">Select the new status for <strong id="modal-qnum">this quote</strong>.</div>
+    <div class="modal-opts">
+      <button onclick="setStatus('complete')" class="btn btn-primary" style="justify-content:center;padding:11px;font-size:13px;border-radius:10px;">✔ Complete — finalised, ready to send</button>
+      <button onclick="setStatus('sent')" class="btn btn-outline" style="justify-content:center;padding:11px;font-size:13px;border-radius:10px;">📤 Sent — delivered to client</button>
+      <button onclick="setStatus('draft')" class="btn btn-ghost" style="justify-content:center;padding:11px;font-size:13px;border-radius:10px;">💾 Keep as Draft</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;"><button class="btn btn-ghost btn-sm" onclick="closeModal('status-modal')">Close</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────
+const CLIENTS={
+  TS:{contact:'Tim Straw',phone:'(+230) 5458 0126',email:'tim.straw@email.com',vat:'',brn:'',addrs:['Calodyne, Mauritius','Villa 4, Anse La Raie, Mauritius']},
+  BV:{contact:'Belle Vue Management',phone:'(+230) 5912 3456',email:'bv@bellevue.mu',vat:'28091234',brn:'C221XXXXX',addrs:['Residencia Belle Vue, Grand Baie','Site B — Pool Area, Grand Baie']},
+  TV:{contact:'Tamarin Villas Office',phone:'(+230) 5867 9100',email:'info@tamarinvillas.mu',vat:'',brn:'',addrs:['Tamarin Villas, Tamarin','Block C, Tamarin','Swimming Pool Area, Tamarin']}
+};
+const COUNTERS={CCTV:8,EBC:30,CIPP:15,HYDRO:4,PAC:1,GAL:1,GP:3,WEBC:1};
+
+let CATALOGUE=[
+  {d:'Travel',r:1500},{d:'Site Establishment (Setup & Cleanup)',r:3500},{d:'Drain Prep',r:6850},
+  {d:'CIPP — DN100 Rehabilitation 3mm PVC Felt Drag and Orange Calibration Hose',r:0},
+  {d:'Consumables',r:0},{d:'Plant and Equipment on Site',r:6500},{d:'Labour (Day Rate)',r:22500},
+  {d:'EBC DN50',r:2350},{d:'EBC DN75',r:3200},{d:'EBC DN100',r:4100},{d:'Labour',r:22500},
+  {d:'General Plumbing',r:0},{d:'Post CCTV Inspection and Report',r:0},{d:'CCTV Inspection',r:0},
+  {d:'Gas Leak Detection',r:0},{d:'Radio Detection (Pipe Locating)',r:0},
+  {d:'CCTV Inspection & Radio Detection (Pipe Locating)',r:0},
+  {d:'CIPP — DN50 — Brawoliner',r:0},{d:'Reinstatement of Junction / Ts',r:0},
+  {d:'Quick Dry Service',r:0},{d:'Acoustic Leak Detection',r:0},
+  {d:'Gas Leak Detection (per Hour Rate)',r:0},{d:'High Pressure & Speed Drain Cleaning',r:0},
+  {d:'Material',r:0},{d:'Outsourced Equipment Rental',r:0},{d:'Overpumping — MH to MH',r:0},
+  {d:'Water Leak Investigation',r:0},{d:'Tracer Gas per Hour — Rate',r:0},
+  {d:'Acoustic Leak Detection per Hour — Rate',r:0},{d:'Biodyne 301 — Waste Treatment',r:0},
+  {d:'DN50 Superflex 2mm Felt Liner',r:0},{d:'Patch Repair — Sectional DN75',r:0},
+  {d:'Waterproofing',r:0},{d:'CIPP Patch Repair DN150 (Sectional)',r:0},
+  {d:'Thermal Image Report and Survey',r:0}
+];
+
+let lineItems=[];
+
+const STATUS_OPTS=['draft','complete','sent','accepted','rejected','hold','job'];
+const STATUS_LABELS={draft:'Draft',complete:'Complete',sent:'Sent',accepted:'Accepted',rejected:'Rejected',hold:'On Hold',job:'Job Created'};
+const STATUS_BADGE={draft:'s-draft',complete:'s-complete',sent:'s-sent',accepted:'s-accepted',rejected:'s-rejected',hold:'s-hold',job:'s-job'};
+const STATUS_ROW={draft:'row-draft',complete:'row-complete',sent:'row-sent',accepted:'row-accepted',rejected:'row-rejected',hold:'row-hold',job:'row-job'};
+
+let QUOTES=[
+  {id:'EBC0029',client:'Tim Straw',type:'EBC',date:'25/05/2026',amount:'65,061.25',status:'accepted',locked:true},
+  {id:'CIPP0014',client:'Belle Vue',type:'CIPP',date:'20/05/2026',amount:'112,500.00',status:'job',locked:false},
+  {id:'CCTV0007',client:'Tamarin Villas',type:'CCTV',date:'18/05/2026',amount:'8,500.00',status:'sent',locked:false},
+  {id:'HYDRO0003',client:'Belle Vue',type:'HYDRO',date:'12/05/2026',amount:'34,200.00',status:'hold',locked:false},
+  {id:'EBC0028',client:'Tim Straw',type:'EBC',date:'05/05/2026',amount:'48,300.00',status:'rejected',locked:true},
+  {id:'GP0002',client:'Tamarin Villas',type:'GP',date:'01/05/2026',amount:'22,000.00',status:'draft',locked:false}
+];
+
+let USERS=[
+  {name:'Shaughn',role:'Admin',av:'SH',perms:{dashboard:true,clients:true,quotes:true,jobs:true,reports:true,price:true,users:true}},
+  {name:'Christiaan',role:'Admin',av:'CH',perms:{dashboard:true,clients:true,quotes:true,jobs:true,reports:true,price:true,users:true}},
+  {name:'Marilize',role:'Admin',av:'ML',perms:{dashboard:true,clients:true,quotes:true,jobs:true,reports:true,price:true,users:true}},
+  {name:'Inge',role:'Admin',av:'IN',perms:{dashboard:true,clients:true,quotes:true,jobs:true,reports:true,price:true,users:true}},
+  {name:'Tyron',role:'Field',av:'TY',perms:{dashboard:false,clients:true,quotes:true,jobs:true,reports:true,price:false,users:false}}
+];
+
+const PERM_KEYS=['dashboard','clients','quotes','jobs','reports','price','users'];
+const PERM_LABELS={dashboard:'Dashboard',clients:'Clients',quotes:'Quotes',jobs:'Jobs',reports:'Reports',price:'Price Schedule',users:'Users & Perms'};
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  const d=new Date();
+  document.getElementById('q-date').value=d.toISOString().split('T')[0];
+  document.getElementById('q-date').addEventListener('change',setValidDate);
+  buildCat();renderItems();renderQuotes();renderPriceSchedule();renderUsers();
+});
+
+function buildCat(){
+  const s=document.getElementById('cat-select');
+  s.innerHTML='<option value="">— Select item —</option>';
+  CATALOGUE.forEach((it,i)=>{
+    const o=document.createElement('option');o.value=i;o.textContent=it.d;s.appendChild(o);
+  });
+}
+
+function setValidDate(){
+  const t=document.getElementById('q-type').value;if(!t)return;
+  const qd=document.getElementById('q-date').value;
+  if(qd){const d=new Date(qd);d.setDate(d.getDate()+14);document.getElementById('q-valid').value=d.toISOString().split('T')[0];}
+}
+
+// ── CLIENT ────────────────────────────────────────────────────
+function onClientChange(){
+  const v=document.getElementById('q-client').value;
+  const nw=document.getElementById('new-client-wrap');
+  const as=document.getElementById('q-address');
+  ['q-contact','q-phone','q-email','q-vat','q-brn'].forEach(id=>document.getElementById(id).value='');
+  if(v==='new'){nw.style.display='';as.innerHTML='<option value="new">+ Type new address…</option>';}
+  else if(v&&CLIENTS[v]){
+    nw.style.display='none';const c=CLIENTS[v];
+    document.getElementById('q-contact').value=c.contact;document.getElementById('q-phone').value=c.phone;
+    document.getElementById('q-email').value=c.email;document.getElementById('q-vat').value=c.vat||'';
+    document.getElementById('q-brn').value=c.brn||'';
+    as.innerHTML='<option value="">— Select site address —</option>';
+    c.addrs.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;as.appendChild(o);});
+    const o2=document.createElement('option');o2.value='new';o2.textContent='+ Add new address…';as.appendChild(o2);
+  }else{nw.style.display='none';as.innerHTML='<option value="">— Select client first —</option>';}
+  onAddressChange();
+}
+function onAddressChange(){document.getElementById('new-addr-wrap').style.display=(document.getElementById('q-address').value==='new')?'':'none';}
+
+// ── QUOTE NUM ─────────────────────────────────────────────────
+function genQuoteNum(){
+  const t=document.getElementById('q-type').value,el=document.getElementById('q-num');
+  if(!t){el.textContent='Select type →';return;}
+  el.textContent=t+String(COUNTERS[t]).padStart(4,'0');setValidDate();
+}
+
+// ── LINE ITEMS ────────────────────────────────────────────────
+function addCatalogueItem(){
+  const s=document.getElementById('cat-select');if(!s.value)return;
+  const it=CATALOGUE[parseInt(s.value)];
+  lineItems.push({d:it.d,r:it.r,q:1,de:false,dp:0});s.value='';renderItems();calcTotals();
+}
+function addCustomItem(){
+  const desc=document.getElementById('custom-desc').value.trim();
+  const rate=parseFloat(document.getElementById('custom-rate').value)||0;
+  if(!desc){showToast('Enter a description first');return;}
+  if(document.getElementById('save-custom').checked){CATALOGUE.push({d:desc,r:rate});buildCat();renderPriceSchedule();showToast('"'+desc+'" saved to price schedule');}
+  lineItems.push({d:desc,r:rate,q:1,de:false,dp:0});
+  document.getElementById('custom-desc').value='';document.getElementById('custom-rate').value='';
+  document.getElementById('save-custom').checked=false;renderItems();calcTotals();
+}
+function renderItems(){
+  const tb=document.getElementById('items-body');
+  if(!lineItems.length){tb.innerHTML='<tr class="empty-row"><td colspan="7">No items yet — add from service line items or use a custom item below.</td></tr>';return;}
+  const fmt=v=>'Rs '+v.toLocaleString('en',{minimumFractionDigits:2});
+  tb.innerHTML=lineItems.map((it,i)=>{
+    const lt=it.q*it.r,da=it.de?lt*it.dp/100:0,net=lt-da;
+    return `<tr>
+      <td><strong style="color:var(--navy);font-size:12px;">${it.d}</strong></td>
+      <td><input class="num-input" type="number" value="${it.q}" min="0.5" step="0.5" onchange="upQ(${i},this.value)"></td>
+      <td><input class="num-input" style="width:86px;" type="number" value="${it.r}" min="0" onchange="upR(${i},this.value)"></td>
+      <td style="color:var(--text-mid);">${fmt(lt)}</td>
+      <td><label class="disc-toggle"><input type="checkbox" ${it.de?'checked':''} onchange="upDE(${i},this.checked)"><span>Apply discount</span></label>${it.de?`<div class="disc-inline"><input type="number" value="${it.dp}" min="0" max="100" onchange="upDP(${i},this.value)"><span>%</span></div>`:''}</td>
+      <td style="font-weight:800;font-size:12px;color:${da>0?'var(--mustard-dark)':'var(--text)'};">${fmt(net)}</td>
+      <td><button onclick="rmItem(${i})" style="background:none;border:none;cursor:pointer;color:#aac4de;font-size:20px;line-height:1;padding:0 4px;">×</button></td>
+    </tr>`;
+  }).join('');
+}
+function upQ(i,v){lineItems[i].q=parseFloat(v)||1;renderItems();calcTotals();}
+function upR(i,v){lineItems[i].r=parseFloat(v)||0;renderItems();calcTotals();}
+function upDE(i,v){lineItems[i].de=v;renderItems();calcTotals();}
+function upDP(i,v){lineItems[i].dp=parseFloat(v)||0;renderItems();calcTotals();}
+function rmItem(i){lineItems.splice(i,1);renderItems();calcTotals();}
+
+// ── TOTALS ────────────────────────────────────────────────────
+function calcTotals(){
+  let sub=0,ld=0;lineItems.forEach(it=>{const lt=it.q*it.r;sub+=lt;if(it.de)ld+=lt*it.dp/100;});
+  const al=sub-ld,op=parseFloat(document.getElementById('overall-disc').value)||0,oa=al*op/100,aa=al-oa,vat=aa*0.15,tot=aa+vat;
+  const fmt=v=>'Rs '+v.toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('td-sub').textContent=fmt(sub);document.getElementById('td-vat').textContent=fmt(vat);
+  document.getElementById('td-total').innerHTML='<strong>'+fmt(tot)+'</strong>';
+  ld>0?(document.getElementById('tr-ld').style.display='',document.getElementById('td-ld').textContent='— '+fmt(ld)):document.getElementById('tr-ld').style.display='none';
+  oa>0?(document.getElementById('tr-od').style.display='',document.getElementById('td-od').textContent='— '+fmt(oa)+' ('+op+'%)'):document.getElementById('tr-od').style.display='none';
+  (ld>0||oa>0)?(document.getElementById('tr-ad').style.display='',document.getElementById('td-ad').textContent=fmt(aa)):document.getElementById('tr-ad').style.display='none';
+}
+
+// ── QUOTES TABLE ──────────────────────────────────────────────
+function renderQuotes(){
+  const tb=document.getElementById('quotes-tbody');
+  tb.innerHTML=QUOTES.map((q,i)=>{
+    const locked=q.locked;
+    const statusCell=locked
+      ?`<span class="sbadge ${STATUS_BADGE[q.status]}">${STATUS_LABELS[q.status]}</span>`
+      :`<select onchange="changeQuoteStatus(${i},this.value)" style="padding:4px 7px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;font-weight:700;font-family:'Nunito Sans',sans-serif;background:white;cursor:pointer;">${STATUS_OPTS.filter(s=>s!=='accepted'&&s!=='rejected').map(s=>`<option value="${s}"${q.status===s?' selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select>`;
+    const editBtn=locked
+      ?`<span style="font-size:11px;color:var(--text-light);font-style:italic;">Locked</span>`
+      :`<button class="btn btn-xs btn-outline" onclick="editQuote(${i})">✏ Edit</button>`;
+    return `<tr class="${STATUS_ROW[q.status]}">
+      <td><strong style="font-family:'Nunito',sans-serif;color:var(--navy);">${q.id}</strong></td>
+      <td>${q.client}</td><td>${q.type}</td><td>${q.date}</td>
+      <td style="font-weight:600;">Rs ${q.amount}</td>
+      <td>${statusCell}</td><td>${editBtn}</td></tr>`;
+  }).join('');
+}
+function changeQuoteStatus(i,v){QUOTES[i].status=v;renderQuotes();showToast(QUOTES[i].id+' → '+STATUS_LABELS[v]);}
+function editQuote(i){const q=QUOTES[i];showToast('Opening '+q.id+' in Quote Builder…');showPage('builder');document.getElementById('q-num').textContent=q.id;}
+
+// ── PRICE SCHEDULE ────────────────────────────────────────────
+function renderPriceSchedule(){
+  const tb=document.getElementById('price-tbody');
+  tb.innerHTML=CATALOGUE.map((it,i)=>`
+    <tr>
+      <td style="color:var(--text-light);font-size:11px;width:36px;">${i+1}</td>
+      <td style="font-weight:500;">${it.d}</td>
+      <td><input class="rate-edit" type="number" value="${it.r}" min="0" placeholder="0.00" onchange="updateRate(${i},this.value)" ${it.r===0?'class="rate-edit rate-zero"':''}></td>
+      <td style="font-size:11px;color:var(--text-light);">Today</td>
+    </tr>`).join('');
+}
+function updateRate(i,v){
+  CATALOGUE[i].r=parseFloat(v)||0;
+  buildCat();
+  showToast('"'+CATALOGUE[i].d+'" rate updated to Rs '+CATALOGUE[i].r.toLocaleString());
+}
+
+// ── EXPORT EXCEL ──────────────────────────────────────────────
+function exportExcel(){
+  let csv='#,Description,Rate (MUR excl. VAT)\n';
+  CATALOGUE.forEach((it,i)=>{csv+=`${i+1},"${it.d}",${it.r}\n`;});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='SimpliWater_Price_Schedule.csv';a.click();
+  showToast('Price Schedule exported (CSV — open in Excel)');
+}
+
+// ── USERS ─────────────────────────────────────────────────────
+function renderUsers(){
+  const tb=document.getElementById('users-tbody');
+  tb.innerHTML=USERS.map((u,ui)=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue-mid),var(--sky));color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;">${u.av}</div><span style="font-weight:700;">${u.name}</span></div></td>
+    <td><span style="font-size:11px;padding:3px 8px;border-radius:8px;background:${u.role==='Admin'?'var(--mustard-light)':'var(--blue-pale)'};color:${u.role==='Admin'?'var(--mustard-dark)':'var(--blue-mid)'};font-weight:700;">${u.role}</span></td>
+    ${PERM_KEYS.map(k=>`<td style="text-align:center;"><label class="perm-toggle"><input type="checkbox" ${u.perms[k]?'checked':''} onchange="togglePerm(${ui},'${k}',this.checked)"><span class="perm-slider"></span></label></td>`).join('')}
+  </tr>`).join('');
+}
+function togglePerm(ui,key,val){USERS[ui].perms[key]=val;showToast(USERS[ui].name+': '+PERM_LABELS[key]+' '+(val?'enabled':'disabled'));}
+
+// ── NAVIGATION ────────────────────────────────────────────────
+const TITLES={dashboard:'Dashboard',clients:'Clients',builder:'Quote Builder',quotes:'Quotes',jobs:'Jobs',reports:'Reports',price:'Price Schedule',users:'Users & Permissions'};
+const PILLS={dashboard:'Admin View',clients:'Client Records',builder:'New Quote',quotes:'Quote History',jobs:'Field Operations',reports:'Documentation',price:'Admin Only',users:'Admin Only'};
+
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el=>{if(el.getAttribute('onclick')?.includes("'"+p+"'"))el.classList.add('active');});
+  document.getElementById('page-title').textContent=TITLES[p]||p;
+  document.getElementById('topbar-pill').textContent=PILLS[p]||'';
+  document.getElementById('topbar-actions').style.display=(p==='builder')?'flex':'none';
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────
+function generatePDF(){window.print();showToast('Tip: right-click → Open in new tab for best PDF results');}
+function openStatusModal(){
+  const qn=document.getElementById('q-num').textContent;
+  document.getElementById('modal-qnum').textContent=qn==='Select type →'?'this quote':qn;
+  document.getElementById('status-modal').style.display='flex';
+}
+function setStatus(s){
+  const qn=document.getElementById('q-num').textContent;
+  showToast((qn==='Select type →'?'Quote':qn)+' → '+STATUS_LABELS[s]);closeModal('status-modal');
+}
+function closeModal(id){document.getElementById(id).style.display='none';}
+function clearQuote(){
+  lineItems=[];renderItems();calcTotals();
+  ['q-client','q-type','q-address','q-scope','q-contact','q-phone','q-email','q-vat','q-brn','overall-disc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('q-num').textContent='Select type →';document.getElementById('q-valid').value='';
+  document.getElementById('new-client-wrap').style.display='none';document.getElementById('new-addr-wrap').style.display='none';
+  showToast('Quote cleared');
+}
+function saveAsDraft(){
+  const qn=document.getElementById('q-num').textContent;
+  if(qn==='Select type →'){showToast('Select a job type first');return;}
+  showToast('Draft saved: '+qn);
+}
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3400);
+}
+</script>
+</body>
+</html>
