@@ -193,13 +193,12 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
 
 /* ── PRINT ── */
 @media print{
-  .sidebar,.topbar,.action-bar,.add-panel,.no-print{display:none!important;}
-  .main{margin-left:0!important;}
-  .content{padding:0!important;}
-  body{background:#fff!important;font-size:12px;}
-  .page{display:none!important;}
-  #print-area{display:block!important;}
-  .card{box-shadow:none!important;border:none!important;page-break-inside:avoid;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  .sidebar,.topbar,.action-bar,.add-panel,.no-print,.modal-overlay,#toast{display:none!important;}
+  .main{margin-left:0!important;background:#fff!important;}
+  .content,.page,.page.active{display:none!important;padding:0!important;}
+  body{background:#fff!important;}
+  #print-area{display:block!important;padding:24px 32px;}
 }
 #print-area{display:none;}
 </style>
@@ -755,8 +754,197 @@ function showPage(p){
   document.getElementById('topbar-actions').style.display=(p==='builder')?'flex':'none';
 }
 
-// ── ACTIONS ───────────────────────────────────────────────────
-function generatePDF(){window.print();showToast('Tip: right-click → Open in new tab for best PDF results');}
+// ── PDF PRINT ─────────────────────────────────────────────────
+function generatePDF(){
+  buildPrintArea();
+  setTimeout(()=>window.print(), 120);
+}
+
+function fmt(v){return 'Rs '+v.toLocaleString('en',{minimumFractionDigits:2});}
+
+function buildPrintArea(){
+  // Collect form values
+  const qNum   = document.getElementById('q-num').textContent.trim();
+  const qDate  = document.getElementById('q-date').value;
+  const qValid = document.getElementById('q-valid').value;
+  const scope  = document.getElementById('q-scope').value.trim();
+  const contact= document.getElementById('q-contact').value.trim();
+  const phone  = document.getElementById('q-phone').value.trim();
+  const email  = document.getElementById('q-email').value.trim();
+  const vat    = document.getElementById('q-vat').value.trim();
+  const brn    = document.getElementById('q-brn').value.trim();
+  const addr   = document.getElementById('q-address').value === 'new'
+                   ? document.getElementById('q-new-address').value.trim()
+                   : document.getElementById('q-address').value;
+  const clientSel = document.getElementById('q-client').value;
+  const clientName= clientSel === 'new'
+                   ? document.getElementById('q-new-client').value.trim()
+                   : document.getElementById('q-client').options[document.getElementById('q-client').selectedIndex]?.text || '';
+  const payTerms  = document.getElementById('q-pay-terms').value.trim();
+  const payNotes  = document.getElementById('q-pay-notes').value.trim();
+  const tcStd     = document.getElementById('q-tc').value.trim();
+  const tcExtra   = document.getElementById('q-tc-extra').value.trim();
+
+  // Format dates
+  const fmtDate = d => { if(!d) return '—'; const p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+
+  // Totals
+  let sub=0, lineDisc=0;
+  lineItems.forEach(it=>{const lt=it.q*it.r; sub+=lt; if(it.de) lineDisc+=lt*it.dp/100;});
+  const afterLine = sub - lineDisc;
+  const op = parseFloat(document.getElementById('overall-disc').value)||0;
+  const oa = afterLine * op / 100;
+  const afterAll = afterLine - oa;
+  const vat15 = afterAll * 0.15;
+  const total = afterAll + vat15;
+  const hasDiscount = lineDisc > 0 || oa > 0;
+
+  // Line items rows
+  const itemRows = lineItems.map((it,i)=>{
+    const lt=it.q*it.r, da=it.de?lt*it.dp/100:0, net=lt-da;
+    const discCell = it.de && it.dp > 0
+      ? `<td style="text-align:right;">${it.dp}%</td><td style="text-align:right;">${fmt(da)}</td>`
+      : (hasDiscount ? `<td></td><td></td>` : '');
+    return `<tr style="border-bottom:1px solid #dde8f5;">
+      <td style="padding:7px 8px;font-size:11px;">${i+1}</td>
+      <td style="padding:7px 8px;font-size:11px;">${it.d}</td>
+      <td style="padding:7px 8px;font-size:11px;text-align:right;">${it.q}</td>
+      <td style="padding:7px 8px;font-size:11px;text-align:right;">${fmt(it.r)}</td>
+      ${discCell}
+      <td style="padding:7px 8px;font-size:11px;text-align:right;font-weight:600;">${fmt(net)}</td>
+    </tr>`;
+  }).join('');
+
+  const discHeader = hasDiscount ? '<th style="padding:8px;text-align:right;background:#e3f2fd;font-size:10px;">Disc %</th><th style="padding:8px;text-align:right;background:#e3f2fd;font-size:10px;">Disc Amt</th>' : '';
+
+  // Totals block rows — only show discount lines if discount applied
+  const totalsRows = `
+    <tr><td style="padding:5px 0;font-size:12px;color:#3a5a7a;">Subtotal (excl. VAT)</td><td style="padding:5px 0;font-size:12px;text-align:right;font-weight:600;">${fmt(sub)}</td></tr>
+    ${lineDisc>0 ? `<tr><td style="padding:4px 0;font-size:11px;color:#1e6fbf;">↳ Line item discounts</td><td style="padding:4px 0;font-size:11px;text-align:right;color:#1e6fbf;">— ${fmt(lineDisc)}</td></tr>` : ''}
+    ${oa>0 ? `<tr><td style="padding:4px 0;font-size:11px;color:#1e6fbf;">↳ Overall discount (${op}%)</td><td style="padding:4px 0;font-size:11px;text-align:right;color:#1e6fbf;">— ${fmt(oa)}</td></tr>` : ''}
+    ${hasDiscount ? `<tr><td style="padding:4px 0;font-size:12px;color:#3a5a7a;">After discounts</td><td style="padding:4px 0;font-size:12px;text-align:right;font-weight:600;">${fmt(afterAll)}</td></tr>` : ''}
+    <tr><td style="padding:5px 0;font-size:12px;color:#4a7fa5;">VAT (15%)</td><td style="padding:5px 0;font-size:12px;text-align:right;font-weight:600;color:#4a7fa5;">${fmt(vat15)}</td></tr>
+    <tr style="border-top:2px solid #0a2540;"><td style="padding:8px 0 4px;font-size:14px;font-weight:800;color:#0a2540;">TOTAL (incl. VAT)</td><td style="padding:8px 0 4px;font-size:14px;font-weight:800;color:#0a2540;text-align:right;">${fmt(total)}</td></tr>`;
+
+  // T&Cs — convert bullet lines to <p> tags
+  const tcLines = tcStd.split('\n').filter(l=>l.trim()).map(l=>`<p style="margin-bottom:5px;font-size:10.5px;line-height:1.6;">${l.trim()}</p>`).join('');
+  const tcExtraLines = tcExtra ? tcExtra.split('\n').filter(l=>l.trim()).map(l=>`<p style="margin-bottom:5px;font-size:10.5px;line-height:1.6;">${l.trim()}</p>`).join('') : '';
+
+  const html = `
+  <div style="font-family:'Nunito Sans',sans-serif;color:#0d1f33;max-width:780px;margin:0 auto;padding:0;">
+
+    <!-- HEADER -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #0a2540;margin-bottom:18px;">
+      <div>
+        <div style="font-family:'Nunito',sans-serif;font-size:32px;font-weight:900;color:#0a2540;line-height:1;">Simpli<span style="color:#7ec8e3;">Water</span></div>
+        <div style="font-size:10px;font-weight:700;color:#6b8aaa;margin-top:3px;text-transform:uppercase;letter-spacing:1px;">SimpliWater Ltd</div>
+        <div style="margin-top:8px;font-size:11px;line-height:1.7;color:#3a5a7a;">
+          Lot 14, Chemin Vingt Pieds, Pereybere, Mauritius<br>
+          (+230) 5825-1624 · simpliwatermu@gmail.com<br>
+          BRN: C22186732 · VAT: 28024189
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;color:#1e6fbf;letter-spacing:1px;">${qNum !== 'Select type →' ? qNum : '—'}</div>
+        <div style="font-size:10px;font-weight:700;color:#6b8aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Quotation</div>
+        <div style="margin-top:8px;font-size:11px;line-height:1.8;color:#3a5a7a;">
+          <strong>Date:</strong> ${fmtDate(qDate)}<br>
+          <strong>Valid Until:</strong> ${fmtDate(qValid)}
+        </div>
+      </div>
+    </div>
+
+    <!-- BILL TO + SCOPE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;">
+      <div style="background:#f0f6fc;border-radius:8px;padding:13px 15px;">
+        <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Bill To</div>
+        <div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientName.replace(' — Calodyne','').replace(' — ','').trim()}</div>
+        ${contact ? `<div style="font-size:11px;color:#3a5a7a;">${contact}</div>` : ''}
+        ${addr ? `<div style="font-size:11px;color:#3a5a7a;margin-top:2px;">${addr}</div>` : ''}
+        ${phone ? `<div style="font-size:11px;color:#3a5a7a;">Tel: ${phone}</div>` : ''}
+        ${email ? `<div style="font-size:11px;color:#3a5a7a;">${email}</div>` : ''}
+        ${vat ? `<div style="font-size:11px;color:#3a5a7a;margin-top:4px;">VAT: ${vat}</div>` : ''}
+        ${brn ? `<div style="font-size:11px;color:#3a5a7a;">BRN: ${brn}</div>` : ''}
+      </div>
+      <div style="background:#f0f6fc;border-radius:8px;padding:13px 15px;">
+        <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Scope of Work</div>
+        <div style="font-size:11px;color:#3a5a7a;line-height:1.65;">${scope || 'As discussed and agreed.'}</div>
+      </div>
+    </div>
+
+    <!-- LINE ITEMS -->
+    <div style="margin-bottom:18px;">
+      <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Line Items</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#0a2540;color:#fff;">
+            <th style="padding:8px;text-align:left;font-size:10px;font-weight:700;width:28px;">#</th>
+            <th style="padding:8px;text-align:left;font-size:10px;font-weight:700;">Description</th>
+            <th style="padding:8px;text-align:right;font-size:10px;font-weight:700;width:40px;">Qty</th>
+            <th style="padding:8px;text-align:right;font-size:10px;font-weight:700;">Unit Rate</th>
+            ${hasDiscount ? '<th style="padding:8px;text-align:right;font-size:10px;font-weight:700;">Disc %</th><th style="padding:8px;text-align:right;font-size:10px;font-weight:700;">Disc Amt</th>' : ''}
+            <th style="padding:8px;text-align:right;font-size:10px;font-weight:700;">Net Total</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows || '<tr><td colspan="6" style="padding:12px 8px;font-size:11px;color:#6b8aaa;">No items added.</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <!-- TOTALS -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+      <table style="width:260px;border-collapse:collapse;">${totalsRows}</table>
+    </div>
+
+    <!-- PAYMENT TERMS + BANKING -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;padding:14px 15px;background:#f0f6fc;border-radius:8px;">
+      <div>
+        <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Payment Terms</div>
+        <div style="font-size:11px;font-weight:600;color:#0a2540;margin-bottom:4px;">${payTerms}</div>
+        ${payNotes ? `<div style="font-size:11px;color:#3a5a7a;">${payNotes}</div>` : ''}
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Banking Details</div>
+        <div style="font-size:11px;line-height:1.8;color:#3a5a7a;">
+          <strong style="color:#0a2540;">Bank:</strong> ABSA Bank (Mauritius) Ltd<br>
+          <strong style="color:#0a2540;">Account:</strong> SIMPLIWATER LTD — 25 200 8349<br>
+          <strong style="color:#0a2540;">IBAN:</strong> MU21BARC0325000002008349<br>
+          <strong style="color:#0a2540;">Swift:</strong> BARCMUMUMA
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMS & CONDITIONS -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Terms & Conditions</div>
+      ${tcLines}
+      ${tcExtraLines ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #dde8f5;">${tcExtraLines}</div>` : ''}
+    </div>
+
+    <!-- SIGNATURE -->
+    <div style="border:1.5px dashed #c8dff0;border-radius:8px;padding:14px 16px;background:#f8fbff;margin-bottom:16px;">
+      <div style="font-size:11px;line-height:1.7;color:#0d1f33;margin-bottom:14px;">I, ________________________________, have read, understood, and agreed to the terms and conditions, payment terms, and all conditions stated in this quotation.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
+        <div><div style="border-bottom:1.5px solid #3a5a7a;height:28px;"></div><div style="font-size:9px;font-weight:800;color:#6b8aaa;text-transform:uppercase;letter-spacing:.8px;margin-top:4px;">Signature</div></div>
+        <div><div style="border-bottom:1.5px solid #3a5a7a;height:28px;"></div><div style="font-size:9px;font-weight:800;color:#6b8aaa;text-transform:uppercase;letter-spacing:.8px;margin-top:4px;">Date</div></div>
+      </div>
+    </div>
+
+    <!-- DISCLAIMERS -->
+    <div style="background:#fff8e6;border:1px solid #f0cc80;border-radius:8px;padding:11px 14px;margin-bottom:10px;font-size:10.5px;line-height:1.7;color:#7a4f00;">
+      <strong style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:3px;opacity:.65;">Equipment Retrieval Disclaimer</strong>
+      In the event that SimpliWater Ltd's equipment becomes lodged or stuck within the client's drainage system, SimpliWater Ltd reserves the right to undertake excavation or other necessary measures to retrieve it. The client acknowledges that retrieval may cause damage to surrounding property or infrastructure. SimpliWater Ltd shall not be held liable for such damage and will charge the client for all associated costs. Excavation rates (excl. materials): Rs 3,500.00/hr.
+    </div>
+    <div style="background:#e8f8f1;border:1px solid #90d4b0;border-radius:8px;padding:11px 14px;font-size:10.5px;line-height:1.7;color:#145a35;">
+      <strong style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:3px;opacity:.65;">Payment & Automatic Acceptance</strong>
+      Receipt of proof of payment constitutes automatic acceptance of this quotation and all associated terms, conditions, and payment terms stated herein.
+    </div>
+
+  </div>`;
+
+  let pa = document.getElementById('print-area');
+  if(!pa){ pa=document.createElement('div'); pa.id='print-area'; document.body.appendChild(pa); }
+  pa.innerHTML = html;
+}
 function openStatusModal(){
   const qn=document.getElementById('q-num').textContent;
   document.getElementById('modal-qnum').textContent=qn==='Select type →'?'this quote':qn;
