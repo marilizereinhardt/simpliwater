@@ -376,8 +376,12 @@ def add_address(cid):
 @app.route('/api/quotes', methods=['GET'])
 @login_required
 def get_quotes():
-    quotes = Quote.query.order_by(Quote.created_at.desc()).all()
-    return jsonify([_quote_summary(q) for q in quotes])
+    try:
+        quotes = Quote.query.order_by(Quote.created_at.desc()).all()
+        return jsonify([_quote_summary(q) for q in quotes])
+    except Exception as e:
+        app.logger.exception("get_quotes failed")
+        return jsonify({'error': f'Could not load quotes: {str(e)}'}), 500
 
 @app.route('/api/quotes/<int:qid>', methods=['GET'])
 @login_required
@@ -388,25 +392,56 @@ def get_quote(qid):
 @app.route('/api/quotes', methods=['POST'])
 @login_required
 def save_quote():
-    data = request.json
-    qnum = data.get('quote_number','')
-    existing = Quote.query.filter_by(quote_number=qnum).first()
-    q = existing or Quote(quote_number=qnum)
-    if not existing:
-        db.session.add(q)
-    q.job_type=data.get('job_type');q.client_id=data.get('client_id')
-    q.site_address=data.get('site_address','');q.scope=data.get('scope','')
-    q.quote_date=_parse_date(data.get('quote_date'));q.valid_until=_parse_date(data.get('valid_until'))
-    q.status=data.get('status','draft');q.pay_terms=data.get('pay_terms','')
-    q.pay_notes=data.get('pay_notes','');q.tc_standard=data.get('tc_standard','')
-    q.tc_extra=data.get('tc_extra','');q.overall_disc=data.get('overall_disc',0)
-    q.total_amount=data.get('total_amount',0);q.created_by=session.get('user_id')
-    db.session.flush()
-    LineItem.query.filter_by(quote_id=q.id).delete()
-    for i,item in enumerate(data.get('line_items',[])):
-        db.session.add(LineItem(quote_id=q.id,description=item.get('description',''),quantity=item.get('quantity',1),unit_rate=item.get('unit_rate',0),disc_enabled=item.get('disc_enabled',False),disc_pct=item.get('disc_pct',0),sort_order=i))
-    db.session.commit()
-    return jsonify({'id':q.id,'quote_number':q.quote_number}), 200
+    try:
+        data = request.json or {}
+        qnum = (data.get('quote_number') or '').strip()
+        if not qnum or qnum == 'Select type →':
+            return jsonify({'error':'Quote number missing — select a job type first'}), 400
+        existing = Quote.query.filter_by(quote_number=qnum).first()
+        q = existing or Quote(quote_number=qnum)
+        if not existing:
+            db.session.add(q)
+        # Validate client_id - must exist or be None
+        cid = data.get('client_id')
+        if cid is not None:
+            try:
+                cid = int(cid)
+                if not Client.query.get(cid):
+                    cid = None
+            except (TypeError, ValueError):
+                cid = None
+        q.job_type    = data.get('job_type') or None
+        q.client_id   = cid
+        q.site_address= (data.get('site_address') or '')[:500]
+        q.scope       = data.get('scope') or ''
+        q.quote_date  = _parse_date(data.get('quote_date')) or date.today()
+        q.valid_until = _parse_date(data.get('valid_until'))
+        q.status      = data.get('status') or 'draft'
+        q.pay_terms   = (data.get('pay_terms') or '')[:200]
+        q.pay_notes   = (data.get('pay_notes') or '')[:200]
+        q.tc_standard = data.get('tc_standard') or ''
+        q.tc_extra    = data.get('tc_extra') or ''
+        q.overall_disc= float(data.get('overall_disc') or 0)
+        q.total_amount= float(data.get('total_amount') or 0)
+        q.created_by  = session.get('user_id')
+        db.session.flush()
+        LineItem.query.filter_by(quote_id=q.id).delete()
+        for i,item in enumerate(data.get('line_items',[])):
+            db.session.add(LineItem(
+                quote_id=q.id,
+                description=(item.get('description') or '')[:500],
+                quantity=float(item.get('quantity') or 1),
+                unit_rate=float(item.get('unit_rate') or 0),
+                disc_enabled=bool(item.get('disc_enabled')),
+                disc_pct=float(item.get('disc_pct') or 0),
+                sort_order=i
+            ))
+        db.session.commit()
+        return jsonify({'id':q.id,'quote_number':q.quote_number}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("save_quote failed")
+        return jsonify({'error': f'Save failed: {str(e)}'}), 500
 
 @app.route('/api/quotes/<int:qid>/status', methods=['PATCH'])
 @login_required
@@ -444,6 +479,19 @@ def add_price_item():
     db.session.commit()
     return jsonify({'id':item.id,'description':item.description,'unit_rate':item.unit_rate}), 201
 
+@app.route('/api/price-schedule/<int:iid>', methods=['DELETE'])
+@login_required
+def delete_price_item(iid):
+    try:
+        item = PriceScheduleItem.query.get_or_404(iid)
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify({'deleted': iid}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("delete_price_item failed")
+        return jsonify({'error': str(e)}), 500
+
 # ── USERS API ────────────────────────────────────────────────────
 
 @app.route('/api/users', methods=['GET'])
@@ -476,7 +524,16 @@ def _parse_date(d):
     except: return None
 
 def _quote_summary(q):
-    return {'id':q.id,'quote_number':q.quote_number,'job_type':q.job_type,'client_name':q.client.name if q.client else '','quote_date':q.quote_date.strftime('%d/%m/%Y') if q.quote_date else '','status':q.status,'total_amount':q.total_amount,'locked':q.status in ('accepted','rejected')}
+    return {
+        'id': q.id,
+        'quote_number': q.quote_number or '',
+        'job_type': q.job_type or '',
+        'client_name': q.client.name if q.client else '',
+        'quote_date': q.quote_date.strftime('%d/%m/%Y') if q.quote_date else '',
+        'status': q.status or 'draft',
+        'total_amount': q.total_amount or 0,
+        'locked': (q.status or '') in ('accepted','rejected')
+    }
 
 def _quote_full(q):
     s=_quote_summary(q)
