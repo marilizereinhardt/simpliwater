@@ -269,7 +269,6 @@ def me():
 # ── INIT & SEED ──────────────────────────────────────────────────
 
 @app.route('/api/init', methods=['GET','POST'])
-@login_required
 def init_db():
     """Initialize database — admin only"""
     if current_user().role != 'admin':
