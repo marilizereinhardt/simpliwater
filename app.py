@@ -166,27 +166,6 @@ class PriceScheduleItem(db.Model):
 
 # ── AUTH HELPERS ─────────────────────────────────────────────────
 
-# ⚠️ TESTING MODE ────────────────────────────────────────────────
-# While TESTING_MODE is True, login is bypassed: every request is
-# auto-authenticated as the first admin user in the database. This is only
-# safe because there's no real client data in the app yet.
-#
-# BEFORE adding real client/quote/pricing data or sharing this URL outside
-# your team, set this back to False (or remove this block) so the normal
-# email/password login in login.html is enforced again.
-TESTING_MODE = os.environ.get('TESTING_MODE', '0') == '1'
-
-def _testing_autologin():
-    if 'user_id' in session:
-        return
-    admin = User.query.filter_by(role='admin', active=True).order_by(User.id).first()
-    if not admin:
-        return  # no users seeded yet — /api/init still needs to run
-    session['user_id'] = admin.id
-    session['user_name'] = admin.name
-    session['user_role'] = admin.role
-    session['user_perms'] = admin.permissions()
-
 _schema_migrated = False
 
 @app.before_request
@@ -203,19 +182,13 @@ def _auto_schema_migration():
         except Exception as e:
             print(f"_migrate_schema() failed: {e}", flush=True)
         try:
+            _revert_christiaan_email()
+        except Exception as e:
+            print(f"_revert_christiaan_email() failed: {e}", flush=True)
+        try:
             _emergency_password_reset()
         except Exception as e:
             print(f"_emergency_password_reset() failed: {e}", flush=True)
-
-@app.before_request
-def _testing_mode_autologin_hook():
-    if TESTING_MODE:
-        try:
-            _testing_autologin()
-        except Exception:
-            # DB may not be initialized yet (e.g. first-ever request) — let
-            # the route handle that normally instead of crashing here.
-            pass
 
 def login_required(f):
     from functools import wraps
@@ -387,9 +360,7 @@ def init_db():
 
     users_exist = User.query.count() > 0
 
-    if TESTING_MODE:
-        pass  # no gate while testing — flip TESTING_MODE off before going live
-    elif users_exist:
+    if users_exist:
         if 'user_id' not in session or session.get('user_role') != 'admin':
             return jsonify({'error': 'Forbidden — admin login required to re-run initialization'}), 403
     else:
@@ -398,7 +369,6 @@ def init_db():
             return jsonify({'error': 'Setup token required for first-time initialization. Set INIT_SETUP_TOKEN in your environment and pass ?setup_token=... once.'}), 403
 
     _migrate_schema()
-    _migrate_emails()
     _seed_users()
     _seed_price_schedule()
     _seed_clients()
@@ -423,30 +393,34 @@ def _migrate_schema():
 TEMP_RESET_PASSWORD = 'SimpliReset2026!'
 
 def _emergency_password_reset():
-    """One-time forced reset so Marilize can get back in without email.
-    REMOVE THIS FUNCTION (and its call below) once logged in again —
-    it's a temporary unlock, not something that should stay in the code."""
-    user = User.query.filter_by(email='marilize.reinhardt@gmail.com').first()
-    if user:
+    """TEMPORARY: sets one shared password on every account so the whole team
+    can log in and test. This is intentionally insecure and must be removed
+    (delete this function + its call site) once everyone has logged in and
+    proper individual passwords / SendGrid email delivery are working."""
+    users = User.query.all()
+    if not users:
+        return
+    for user in users:
         user.set_password(TEMP_RESET_PASSWORD)
         user.reset_token = None
-        db.session.commit()
-        print(f"Emergency password reset applied for marilize.reinhardt@gmail.com", flush=True)
+    db.session.commit()
+    print(f"Emergency password reset applied to {len(users)} account(s)", flush=True)
 
-def _migrate_emails():
-    """One-time fixups for existing seeded accounts (safe to run repeatedly)."""
-    old = User.query.filter_by(email='cmvdh1988@gmail.com').first()
-    if old:
-        old.email = 'simpliwatermu@gmail.com'
+def _revert_christiaan_email():
+    """One-time fix: undo the earlier cmvdh1988@gmail.com -> simpliwatermu@gmail.com
+    migration. Safe to run repeatedly — does nothing once already reverted."""
+    user = User.query.filter_by(email='simpliwatermu@gmail.com', name='Christiaan').first()
+    if user:
+        user.email = 'cmvdh1988@gmail.com'
         db.session.commit()
-        print("Migrated Christiaan's login email to simpliwatermu@gmail.com")
+        print("Reverted Christiaan's login email back to cmvdh1988@gmail.com", flush=True)
 
 def _seed_users():
     if User.query.count() > 0:
         return
     users = [
         {'name':'Shaughn',    'email':'shaughn@simpliwater.mu',          'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
-        {'name':'Christiaan', 'email':'simpliwatermu@gmail.com',         'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
+        {'name':'Christiaan', 'email':'cmvdh1988@gmail.com',              'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Marilize',   'email':'marilize.reinhardt@gmail.com',    'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Inge',       'email':'inge@simpliwater.mu',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Tyron',      'email':'tyron@simpliwater.mu',            'role':'field','perms':{'dashboard':False,'price':False,'users':False}},
