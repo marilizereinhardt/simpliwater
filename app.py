@@ -269,7 +269,11 @@ def me():
 # ── INIT & SEED ──────────────────────────────────────────────────
 
 @app.route('/api/init', methods=['GET','POST'])
+@login_required
 def init_db():
+    """Initialize database — admin only"""
+    if current_user().role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
     db.create_all()
     _seed_users()
     _seed_price_schedule()
@@ -381,7 +385,8 @@ def get_quotes():
         return jsonify([_quote_summary(q) for q in quotes])
     except Exception as e:
         app.logger.exception("get_quotes failed")
-        return jsonify({'error': f'Could not load quotes: {str(e)}'}), 500
+        # Don't expose database schema in error messages
+        return jsonify({'error': 'Could not load quotes — database error'}), 500
 
 @app.route('/api/quotes/<int:qid>', methods=['GET'])
 @login_required
@@ -441,7 +446,10 @@ def save_quote():
     except Exception as e:
         db.session.rollback()
         app.logger.exception("save_quote failed")
-        return jsonify({'error': f'Save failed: {str(e)}'}), 500
+        # Log the real error but return generic message to prevent schema disclosure
+        if 'column' in str(e).lower() or 'undefined' in str(e).lower():
+            return jsonify({'error': 'Save failed — database schema error. Please contact support.'}), 500
+        return jsonify({'error': 'Save failed — please try again or contact support'}), 500
 
 @app.route('/api/quotes/<int:qid>/status', methods=['PATCH'])
 @login_required
