@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from sqlalchemy import text, inspect as sa_inspect
 from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
@@ -349,13 +349,18 @@ def me():
 def debug_counts():
     if session.get('user_role') != 'admin':
         return jsonify({'error': 'Admin only'}), 403
+    def safe_count(model, label):
+        try:
+            return model.query.count()
+        except Exception as e:
+            return f'ERROR: {e}'
     return jsonify({
-        'users': User.query.count(),
-        'clients': Client.query.count(),
-        'client_addresses': ClientAddress.query.count(),
-        'price_schedule_items': PriceScheduleItem.query.count(),
-        'quotes': Quote.query.count(),
-        'line_items': LineItem.query.count(),
+        'users': safe_count(User, 'users'),
+        'clients': safe_count(Client, 'clients'),
+        'client_addresses': safe_count(ClientAddress, 'client_addresses'),
+        'price_schedule_items': safe_count(PriceScheduleItem, 'price_schedule_items'),
+        'quotes': safe_count(Quote, 'quotes'),
+        'line_items': safe_count(LineItem, 'line_items'),
         'database_host': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else 'unknown',
     })
 
@@ -391,21 +396,31 @@ def init_db():
     return jsonify({'status':'ok','message':'Database initialised'})
 
 def _migrate_schema():
-    """Add columns that exist in the models but may be missing from an
-    already-created table (db.create_all() only creates NEW tables — it
-    never alters existing ones). Safe to run repeatedly."""
-    statements = [
-        "ALTER TABLE price_schedule ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
-        "ALTER TABLE line_items ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS company_name VARCHAR(200)",
-    ]
+    """Auto-detect and add any columns that exist in the SQLAlchemy models
+    but are missing from the actual database tables. db.create_all() only
+    creates brand-new tables — it never adds columns to ones that already
+    exist, so this handles that gap generically instead of needing a
+    manually maintained, easy-to-forget list of ALTER TABLE statements.
+    Only ever ADDs columns — never drops or modifies existing data. Safe
+    to run repeatedly."""
+    inspector = sa_inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
     with db.engine.connect() as conn:
-        for stmt in statements:
-            try:
-                conn.execute(text(stmt))
-                conn.commit()
-            except Exception as e:
-                print(f"Schema migration skipped/failed for: {stmt} — {e}")
+        for table in db.metadata.sorted_tables:
+            if table.name not in existing_tables:
+                continue  # brand new table — db.create_all() already handled it
+            existing_cols = {c['name'] for c in inspector.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing_cols:
+                    continue
+                try:
+                    col_type = col.type.compile(dialect=db.engine.dialect)
+                    stmt = f'ALTER TABLE "{table.name}" ADD COLUMN IF NOT EXISTS "{col.name}" {col_type}'
+                    conn.execute(text(stmt))
+                    conn.commit()
+                    print(f"Auto-migrated: added missing column {table.name}.{col.name}", flush=True)
+                except Exception as e:
+                    print(f"Auto-migration failed for {table.name}.{col.name}: {e}", flush=True)
 
 TEMP_RESET_PASSWORD = 'SimpliReset2026!'
 
