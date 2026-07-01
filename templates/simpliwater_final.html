@@ -845,7 +845,7 @@ function renderItems(){
   tb.innerHTML=lineItems.map((it,i)=>{
     const lt=it.q*it.r,da=it.de?lt*it.dp/100:0,net=lt-da;
     return `<tr>
-      <td><strong style="color:var(--navy);font-size:12px;">${it.d}</strong></td>
+      <td><strong style="color:var(--navy);font-size:12px;">${escapeHtml(it.d)}</strong></td>
       <td data-label="Qty"><input class="num-input" type="number" value="${it.q}" min="0.5" step="0.5" onchange="upQ(${i},this.value)"></td>
       <td data-label="Rate (MUR)"><input class="num-input" style="width:86px;" type="number" value="${it.r}" min="0" onchange="upR(${i},this.value)"></td>
       <td data-label="Line Total" style="color:var(--text-mid);">${fmtR(lt)}</td>
@@ -971,9 +971,9 @@ function renderQuotes(){
       :`<button class="btn btn-xs btn-outline" onclick="editQuote(${q.id})">✏ Edit</button>`;
     const fmtAmt='Rs '+(q.total_amount||0).toLocaleString('en',{minimumFractionDigits:2});
     return `<tr class="${STATUS_ROW[q.status]||''}">
-      <td><strong style="font-family:'Nunito',sans-serif;color:var(--navy);">${q.quote_number}</strong></td>
-      <td>${q.client_name||'—'}</td>
-      <td>${q.job_type||'—'}</td>
+      <td><strong style="font-family:'Nunito',sans-serif;color:var(--navy);">${escapeHtml(q.quote_number)}</strong></td>
+      <td>${escapeHtml(q.client_name)||'—'}</td>
+      <td>${escapeHtml(q.job_type)||'—'}</td>
       <td>${q.quote_date||'—'}</td>
       <td style="font-weight:600;">${fmtAmt}</td>
       <td>${statusCell}</td>
