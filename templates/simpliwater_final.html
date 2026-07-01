@@ -411,21 +411,25 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
             <input type="text" id="new-client-name" placeholder="e.g. Calodyne Ltd">
           </div>
           <div class="form-group">
-            <label>Contact Person</label>
-            <input type="text" id="new-client-contact" placeholder="Tim Straw">
+            <label>Company Name (optional)</label>
+            <input type="text" id="new-client-company" placeholder="e.g. Calodyne Ltd">
           </div>
         </div>
         <div class="form-row c2">
+          <div class="form-group">
+            <label>Contact Person</label>
+            <input type="text" id="new-client-contact" placeholder="Tim Straw">
+          </div>
           <div class="form-group">
             <label>Phone</label>
             <input type="tel" id="new-client-phone" placeholder="(+230) 5458 0126">
           </div>
+        </div>
+        <div class="form-row c2">
           <div class="form-group">
             <label>Email</label>
             <input type="email" id="new-client-email" placeholder="tim@company.com">
           </div>
-        </div>
-        <div class="form-row c2">
           <div class="form-group">
             <label>VAT Number</label>
             <input type="text" id="new-client-vat" placeholder="28024189">
@@ -812,13 +816,16 @@ function renderClients(){
   listEl.innerHTML=filtered.map(c=>{
     const addr=(c.addresses&&c.addresses.length)?c.addresses[0]:'—';
     const initials=getInitials(c.name);
-    return `<div class="client-card">
+    const companyLine=c.company?`<div class="client-meta" style="font-weight:600;color:var(--blue-mid);">${c.company}</div>`:'';
+    return `<div class="client-card" style="position:relative;">
       <div class="client-av">${initials}</div>
-      <div>
+      <div style="flex:1;">
         <div class="client-name">${c.name}</div>
+        ${companyLine}
         <div class="client-meta">${c.contact||'—'} · ${c.phone||'—'} · ${c.email||'—'}</div>
         <div class="client-meta">📍 ${addr} · VAT: ${c.vat||'—'} · BRN: ${c.brn||'—'}</div>
       </div>
+      <button onclick="deleteClientConfirm(${c.id},'${c.name}')" title="Delete client" style="background:none;border:none;cursor:pointer;color:#c0d4e8;font-size:18px;line-height:1;padding:8px;transition:color .15s;" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#c0d4e8'">🗑</button>
     </div>`;
   }).join('');
 }
@@ -826,8 +833,22 @@ function getInitials(name){
   if(!name) return '?';
   return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 }
+function deleteClientConfirm(id, name){
+  if(!confirm(`Delete "${name}"?\n\nThis client will be permanently removed. Quotes linked to this client will be unaffected.`)) return;
+  deleteClient(id, name);
+}
+async function deleteClient(id, name){
+  const result=await api('DELETE','/api/clients/'+id);
+  if(result){
+    CLIENTS_DATA=CLIENTS_DATA.filter(c=>c.id!==id);
+    renderClients();
+    await loadClients();
+    showToast('"'+name+'" deleted');
+  }
+}
 function openClientForm(){
   document.getElementById('new-client-name').value='';
+  document.getElementById('new-client-company').value='';
   document.getElementById('new-client-contact').value='';
   document.getElementById('new-client-phone').value='';
   document.getElementById('new-client-email').value='';
@@ -842,6 +863,7 @@ async function saveNewClient(){
   if(!name){showToast('Enter a client name');return;}
   const result=await api('POST','/api/clients',{
     name:name,
+    company:(document.getElementById('new-client-company').value||'').trim(),
     contact:(document.getElementById('new-client-contact').value||'').trim(),
     phone:(document.getElementById('new-client-phone').value||'').trim(),
     email:(document.getElementById('new-client-email').value||'').trim(),
@@ -1308,7 +1330,36 @@ function buildPrintArea(){
   const addr=document.getElementById('q-address').value==='new'?escapeHtml(document.getElementById('q-new-address').value.trim()):escapeHtml(document.getElementById('q-address').value);
   const clientSel=document.getElementById('q-client').value;
   const clientOpt=document.getElementById('q-client').options[document.getElementById('q-client').selectedIndex];
-  const clientName=clientSel==='new'?escapeHtml(document.getElementById('q-new-client').value.trim()):escapeHtml(clientOpt?clientOpt.text:'');
+  
+  // Get client info - company name + contact person intelligently
+  let clientName='';
+  let clientCompany='';
+  let billToDisplay='';
+  
+  if(clientSel==='new'){
+    clientName=escapeHtml(document.getElementById('q-new-client').value.trim());
+    clientCompany='';
+  } else if(clientSel){
+    const clientObj=CLIENTS_DATA.find(c=>c.id==clientSel);
+    if(clientObj){
+      clientName=escapeHtml(clientObj.name||'');
+      clientCompany=escapeHtml(clientObj.company||'');
+    }
+  }
+  
+  // Build Bill To display: show company name if available, then contact person
+  if(clientCompany){
+    billToDisplay=`<div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientCompany}</div>`;
+    if(contact){
+      billToDisplay+=`<div style="font-size:11px;color:#3a5a7a;margin-bottom:4px;"><strong>Contact:</strong> ${contact}</div>`;
+    } else if(clientName){
+      billToDisplay+=`<div style="font-size:11px;color:#3a5a7a;margin-bottom:4px;"><strong>Attn:</strong> ${clientName}</div>`;
+    }
+  } else {
+    // No company - show client name or contact person
+    billToDisplay=`<div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${contact||clientName||'—'}</div>`;
+  }
+  
   const payTerms=escapeHtml(document.getElementById('q-pay-terms').value.trim());
   const payNotes=escapeHtml(document.getElementById('q-pay-notes').value.trim());
   const tcStd=escapeHtml(document.getElementById('q-tc').value.trim());
@@ -1358,8 +1409,7 @@ function buildPrintArea(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;">
       <div style="background:#f0f6fc;border-radius:8px;padding:13px 15px;">
         <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Bill To</div>
-        <div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientName}</div>
-        ${contact?`<div style="font-size:11px;color:#3a5a7a;">${contact}</div>`:''}
+        ${billToDisplay}
         ${addr?`<div style="font-size:11px;color:#3a5a7a;margin-top:2px;">${addr}</div>`:''}
         ${phone?`<div style="font-size:11px;color:#3a5a7a;">Tel: ${phone}</div>`:''}
         ${email?`<div style="font-size:11px;color:#3a5a7a;">${email}</div>`:''}
