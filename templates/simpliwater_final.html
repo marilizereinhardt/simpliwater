@@ -543,7 +543,18 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
             <option value="new">+ Add New Client…</option>
           </select>
         </div>
-        <div class="form-group" id="new-client-wrap" style="display:none;"><label>New Client Name</label><input type="text" id="q-new-client" placeholder="Full name or company"></div>
+        <div class="form-group" id="new-client-wrap" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-group" style="margin:0;">
+              <label>Contact Person Name</label>
+              <input type="text" id="q-new-client" placeholder="Full name">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Company Name (optional)</label>
+              <input type="text" id="q-new-client-company" placeholder="e.g. Calodyne Ltd">
+            </div>
+          </div>
+        </div>
         <div class="form-group"><label>Site Address</label><select id="q-address" onchange="onAddressChange()"><option value="">— Select client first —</option></select></div>
       </div>
       <div class="form-row" id="new-addr-wrap" style="display:none;">
@@ -928,6 +939,10 @@ async function loadQuotes(){
   if(!data) return;
   QUOTES=data;
   renderQuotes();
+  // Update badge with count of open quotes (Draft + Sent only)
+  const openCount=QUOTES.filter(q=>q.status==='draft'||q.status==='sent').length;
+  const badges=document.querySelectorAll('.nav-badge');
+  if(badges.length>1) badges[1].textContent=openCount||'—'; // Quotes badge is second badge
 }
 
 // ── CLIENT CHANGE ─────────────────────────────────────────────
@@ -935,7 +950,7 @@ function onClientChange(){
   const v=document.getElementById('q-client').value;
   const nw=document.getElementById('new-client-wrap');
   const as=document.getElementById('q-address');
-  ['q-contact','q-phone','q-email','q-vat','q-brn'].forEach(id=>document.getElementById(id).value='');
+  ['q-contact','q-phone','q-email','q-vat','q-brn','q-new-client','q-new-client-company'].forEach(id=>document.getElementById(id).value='');
   if(v==='new'){
     nw.style.display='';
     as.innerHTML='<option value="new">+ Type new address…</option>';
