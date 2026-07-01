@@ -106,16 +106,17 @@ class User(db.Model):
 
 class Client(db.Model):
     __tablename__ = 'clients'
-    id         = db.Column(db.Integer, primary_key=True)
-    name       = db.Column(db.String(200), nullable=False)
-    contact    = db.Column(db.String(200))
-    phone      = db.Column(db.String(50))
-    email      = db.Column(db.String(200))
-    vat        = db.Column(db.String(50))
-    brn        = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    addresses  = db.relationship('ClientAddress', backref='client', lazy=True, cascade='all, delete-orphan')
-    quotes     = db.relationship('Quote', backref='client', lazy=True)
+    id           = db.Column(db.Integer, primary_key=True)
+    name         = db.Column(db.String(200), nullable=False)
+    company_name = db.Column(db.String(200))
+    contact      = db.Column(db.String(200))
+    phone        = db.Column(db.String(50))
+    email        = db.Column(db.String(200))
+    vat          = db.Column(db.String(50))
+    brn          = db.Column(db.String(50))
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    addresses    = db.relationship('ClientAddress', backref='client', lazy=True, cascade='all, delete-orphan')
+    quotes       = db.relationship('Quote', backref='client', lazy=True)
 
 class ClientAddress(db.Model):
     __tablename__ = 'client_addresses'
@@ -343,6 +344,21 @@ def me():
 
 # ── INIT & SEED ──────────────────────────────────────────────────
 
+@app.route('/api/debug/counts', methods=['GET'])
+@login_required
+def debug_counts():
+    if session.get('user_role') != 'admin':
+        return jsonify({'error': 'Admin only'}), 403
+    return jsonify({
+        'users': User.query.count(),
+        'clients': Client.query.count(),
+        'client_addresses': ClientAddress.query.count(),
+        'price_schedule_items': PriceScheduleItem.query.count(),
+        'quotes': Quote.query.count(),
+        'line_items': LineItem.query.count(),
+        'database_host': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else 'unknown',
+    })
+
 @app.route('/api/init', methods=['GET','POST'])
 def init_db():
     """Initialize database.
@@ -381,6 +397,7 @@ def _migrate_schema():
     statements = [
         "ALTER TABLE price_schedule ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
         "ALTER TABLE line_items ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
+        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS company_name VARCHAR(200)",
     ]
     with db.engine.connect() as conn:
         for stmt in statements:
@@ -492,13 +509,13 @@ def _seed_clients():
 @login_required
 def get_clients():
     clients = Client.query.order_by(Client.name).all()
-    return jsonify([{'id':c.id,'name':c.name,'contact':c.contact,'phone':c.phone,'email':c.email,'vat':c.vat,'brn':c.brn,'addresses':[a.address for a in c.addresses]} for c in clients])
+    return jsonify([{'id':c.id,'name':c.name,'company_name':c.company_name,'contact':c.contact,'phone':c.phone,'email':c.email,'vat':c.vat,'brn':c.brn,'addresses':[a.address for a in c.addresses]} for c in clients])
 
 @app.route('/api/clients', methods=['POST'])
 @login_required
 def create_client():
     data = request.json
-    client = Client(name=data.get('name',''),contact=data.get('contact',''),phone=data.get('phone',''),email=data.get('email',''),vat=data.get('vat',''),brn=data.get('brn',''))
+    client = Client(name=data.get('name',''),company_name=data.get('company_name',''),contact=data.get('contact',''),phone=data.get('phone',''),email=data.get('email',''),vat=data.get('vat',''),brn=data.get('brn',''))
     db.session.add(client)
     db.session.flush()
     for addr in data.get('addresses',[]):
@@ -516,6 +533,17 @@ def add_address(cid):
     return jsonify({'id':addr.id,'address':addr.address}), 201
 
 # ── QUOTE API ────────────────────────────────────────────────────
+
+@app.route('/api/quotes/check-number', methods=['GET'])
+@login_required
+def check_quote_number():
+    num = (request.args.get('number') or '').strip()
+    exclude_id = request.args.get('exclude_id', type=int)
+    if not num:
+        return jsonify({'exists': False})
+    q = Quote.query.filter_by(quote_number=num).first()
+    exists = bool(q and (exclude_id is None or q.id != exclude_id))
+    return jsonify({'exists': exists})
 
 @app.route('/api/quotes', methods=['GET'])
 @login_required
@@ -542,10 +570,27 @@ def save_quote():
         qnum = (data.get('quote_number') or '').strip()
         if not qnum or qnum == 'Select type →':
             return jsonify({'error':'Quote number missing — select a job type first'}), 400
-        existing = Quote.query.filter_by(quote_number=qnum).first()
-        q = existing or Quote(quote_number=qnum)
-        if not existing:
+
+        qid = data.get('id')
+        conflict = Quote.query.filter_by(quote_number=qnum).first()
+
+        if qid:
+            # Editing an existing quote (by id). If this number belongs to a
+            # DIFFERENT quote, refuse — never silently overwrite another quote.
+            q = Quote.query.get(qid)
+            if not q:
+                return jsonify({'error': 'Quote not found'}), 404
+            if conflict and conflict.id != q.id:
+                return jsonify({'error': f'Quote number "{qnum}" is already used by another quote. Choose a different number.'}), 409
+        else:
+            # Creating a new quote. If this number already exists, refuse
+            # rather than silently editing that unrelated quote.
+            if conflict:
+                return jsonify({'error': f'Quote number "{qnum}" already exists. Choose a different number or use "Edit" on the existing quote instead.'}), 409
+            q = Quote(quote_number=qnum)
             db.session.add(q)
+
+        q.quote_number = qnum
         # Validate client_id - must exist or be None
         cid = data.get('client_id')
         if cid is not None:
