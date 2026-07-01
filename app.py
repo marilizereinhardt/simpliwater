@@ -270,9 +270,7 @@ def me():
 
 @app.route('/api/init', methods=['GET','POST'])
 def init_db():
-    """Initialize database — admin only"""
-    if current_user().role != 'admin':
-        return jsonify({'error': 'Admin access required'}), 403
+    """Initialize database"""
     db.create_all()
     _seed_users()
     _seed_price_schedule()
