@@ -1,4 +1,6 @@
 import os
+import sys
+sys.stdout.reconfigure(line_buffering=True)
 import time
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
@@ -191,13 +193,19 @@ _schema_migrated = False
 def _auto_schema_migration():
     global _schema_migrated
     if not _schema_migrated:
+        _schema_migrated = True  # set first — never retry-loop on every request
         try:
             db.create_all()
+        except Exception as e:
+            print(f"db.create_all() failed: {e}", flush=True)
+        try:
             _migrate_schema()
+        except Exception as e:
+            print(f"_migrate_schema() failed: {e}", flush=True)
+        try:
             _emergency_password_reset()
         except Exception as e:
-            print(f"Startup schema migration failed: {e}")
-        _schema_migrated = True
+            print(f"_emergency_password_reset() failed: {e}", flush=True)
 
 @app.before_request
 def _testing_mode_autologin_hook():
