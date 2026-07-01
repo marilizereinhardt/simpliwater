@@ -6,8 +6,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import sendgrid
 from sendgrid.helpers.mail import Mail
-import csv
-from io import StringIO
 
 app = Flask(__name__)
 
@@ -331,8 +329,7 @@ def _seed_price_schedule():
     db.session.commit()
 
 def _seed_clients():
-    # Don't auto-create dummy clients anymore
-    # Clients are added either via Quote creation or manual Client form
+    # Don't auto-seed dummy clients — let users add real clients
     pass
 
 # ── CLIENT API ───────────────────────────────────────────────────
@@ -341,7 +338,7 @@ def _seed_clients():
 @login_required
 def get_clients():
     clients = Client.query.order_by(Client.name).all()
-    return jsonify([{'id':c.id,'name':c.name,'contact':c.contact,'phone':c.phone,'email':c.email,'vat':c.vat,'brn':c.brn,'addresses':[a.address for a in c.addresses]} for c in clients])
+    return jsonify([{'id':c.id,'name':c.name,'company':c.company,'contact':c.contact,'phone':c.phone,'email':c.email,'vat':c.vat,'brn':c.brn,'addresses':[a.address for a in c.addresses]} for c in clients])
 
 @app.route('/api/clients', methods=['POST'])
 @login_required
@@ -349,7 +346,7 @@ def create_client():
     data = request.json
     client = Client(
         name=data.get('name',''),
-        company=data.get('company','') or None,  # None if blank
+        company=data.get('company','') or None,
         contact=data.get('contact',''),
         phone=data.get('phone',''),
         email=data.get('email',''),
@@ -368,7 +365,6 @@ def create_client():
 def delete_client(cid):
     try:
         client = Client.query.get_or_404(cid)
-        # Check if client has quotes - can't delete if it does
         if client.quotes:
             return jsonify({'error': f'Cannot delete "{client.name}" — this client has {len(client.quotes)} quote(s). Delete or reassign quotes first.'}), 409
         db.session.delete(client)
@@ -388,6 +384,51 @@ def add_address(cid):
     db.session.commit()
     return jsonify({'id':addr.id,'address':addr.address}), 201
 
+@app.route('/api/export/clients', methods=['GET'])
+@login_required
+def export_clients_csv():
+    try:
+        clients = Client.query.order_by(Client.name).all()
+        rows = []
+        for c in clients:
+            addresses = ' | '.join([a.address for a in c.addresses])
+            rows.append({
+                'Client Name': c.name or '',
+                'Company Name': c.company or '',
+                'Contact Person': c.contact or '',
+                'Phone': c.phone or '',
+                'Email': c.email or '',
+                'VAT': c.vat or '',
+                'BRN': c.brn or '',
+                'Addresses': addresses,
+            })
+        return jsonify(rows), 200
+    except Exception as e:
+        app.logger.exception("export_clients_csv failed")
+        return jsonify({'error': 'Export failed'}), 500
+
+@app.route('/api/export/quotes', methods=['GET'])
+@login_required
+def export_quotes_csv():
+    try:
+        quotes = Quote.query.order_by(Quote.quote_number).all()
+        rows = []
+        for q in quotes:
+            rows.append({
+                'Quote Number': q.quote_number or '',
+                'Client': q.client.name if q.client else '',
+                'Job Type': q.job_type or '',
+                'Date': q.quote_date.strftime('%d/%m/%Y') if q.quote_date else '',
+                'Amount (MUR)': q.total_amount or 0,
+                'Status': q.status or '',
+                'Site Address': q.site_address or '',
+                'Scope': q.scope or '',
+            })
+        return jsonify(rows), 200
+    except Exception as e:
+        app.logger.exception("export_quotes_csv failed")
+        return jsonify({'error': 'Export failed'}), 500
+
 # ── QUOTE API ────────────────────────────────────────────────────
 
 @app.route('/api/quotes', methods=['GET'])
@@ -398,7 +439,6 @@ def get_quotes():
         return jsonify([_quote_summary(q) for q in quotes])
     except Exception as e:
         app.logger.exception("get_quotes failed")
-        # Don't expose database schema in error messages
         return jsonify({'error': 'Could not load quotes — database error'}), 500
 
 @app.route('/api/quotes/<int:qid>', methods=['GET'])
@@ -423,12 +463,10 @@ def save_quote():
             if existing:
                 return jsonify({'error':f'Quote number {qnum} already exists. Choose a different number or edit the existing quote.'}), 409
         
-        # Get or create quote
         existing = Quote.query.filter_by(quote_number=qnum).first() if not is_new else None
         q = existing or Quote(quote_number=qnum)
         if not existing:
             db.session.add(q)
-        
         # Validate client_id - must exist or be None
         cid = data.get('client_id')
         if cid is not None:
@@ -438,7 +476,6 @@ def save_quote():
                     cid = None
             except (TypeError, ValueError):
                 cid = None
-        
         q.job_type    = data.get('job_type') or None
         q.client_id   = cid
         q.site_address= (data.get('site_address') or '')[:500]
@@ -454,7 +491,6 @@ def save_quote():
         q.total_amount= float(data.get('total_amount') or 0)
         q.created_by  = session.get('user_id')
         db.session.flush()
-        
         LineItem.query.filter_by(quote_id=q.id).delete()
         for i,item in enumerate(data.get('line_items',[])):
             db.session.add(LineItem(
@@ -471,6 +507,7 @@ def save_quote():
     except Exception as e:
         db.session.rollback()
         app.logger.exception("save_quote failed")
+        # Log the real error but return generic message to prevent schema disclosure
         if 'column' in str(e).lower() or 'undefined' in str(e).lower():
             return jsonify({'error': 'Save failed — database schema error. Please contact support.'}), 500
         return jsonify({'error': 'Save failed — please try again or contact support'}), 500
@@ -523,54 +560,6 @@ def delete_price_item(iid):
         db.session.rollback()
         app.logger.exception("delete_price_item failed")
         return jsonify({'error': str(e)}), 500
-
-# ── CSV EXPORT API ────────────────────────────────────────────────
-@app.route('/api/export/quotes', methods=['GET'])
-@login_required
-def export_quotes_csv():
-    try:
-        quotes = Quote.query.order_by(Quote.quote_number).all()
-        rows = []
-        for q in quotes:
-            rows.append({
-                'Quote Number': q.quote_number or '',
-                'Client': q.client.name if q.client else '',
-                'Job Type': q.job_type or '',
-                'Date': q.quote_date.strftime('%d/%m/%Y') if q.quote_date else '',
-                'Amount (MUR)': q.total_amount or 0,
-                'Status': q.status or '',
-                'Site Address': q.site_address or '',
-                'Scope': q.scope or '',
-            })
-        # Return as JSON for frontend to convert to CSV
-        return jsonify(rows), 200
-    except Exception as e:
-        app.logger.exception("export_quotes_csv failed")
-        return jsonify({'error': 'Export failed'}), 500
-
-@app.route('/api/export/clients', methods=['GET'])
-@login_required
-def export_clients_csv():
-    try:
-        clients = Client.query.order_by(Client.name).all()
-        rows = []
-        for c in clients:
-            addresses = ' | '.join([a.address for a in c.addresses])
-            rows.append({
-                'Client Name': c.name or '',
-                'Company Name': c.company or '',
-                'Contact Person': c.contact or '',
-                'Phone': c.phone or '',
-                'Email': c.email or '',
-                'VAT': c.vat or '',
-                'BRN': c.brn or '',
-                'Addresses': addresses,
-            })
-        # Return as JSON for frontend to convert to CSV
-        return jsonify(rows), 200
-    except Exception as e:
-        app.logger.exception("export_clients_csv failed")
-        return jsonify({'error': 'Export failed'}), 500
 
 # ── USERS API ────────────────────────────────────────────────────
 
