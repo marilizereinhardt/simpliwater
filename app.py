@@ -3,6 +3,7 @@ import time
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
@@ -183,6 +184,19 @@ def _testing_autologin():
     session['user_name'] = admin.name
     session['user_role'] = admin.role
     session['user_perms'] = admin.permissions()
+
+_schema_migrated = False
+
+@app.before_request
+def _auto_schema_migration():
+    global _schema_migrated
+    if not _schema_migrated:
+        try:
+            db.create_all()
+            _migrate_schema()
+        except Exception as e:
+            print(f"Startup schema migration failed: {e}")
+        _schema_migrated = True
 
 @app.before_request
 def _testing_mode_autologin_hook():
@@ -374,11 +388,28 @@ def init_db():
         if not INIT_SETUP_TOKEN or supplied != INIT_SETUP_TOKEN:
             return jsonify({'error': 'Setup token required for first-time initialization. Set INIT_SETUP_TOKEN in your environment and pass ?setup_token=... once.'}), 403
 
+    _migrate_schema()
     _migrate_emails()
     _seed_users()
     _seed_price_schedule()
     _seed_clients()
     return jsonify({'status':'ok','message':'Database initialised'})
+
+def _migrate_schema():
+    """Add columns that exist in the models but may be missing from an
+    already-created table (db.create_all() only creates NEW tables — it
+    never alters existing ones). Safe to run repeatedly."""
+    statements = [
+        "ALTER TABLE price_schedule ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
+        "ALTER TABLE line_items ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
+    ]
+    with db.engine.connect() as conn:
+        for stmt in statements:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception as e:
+                print(f"Schema migration skipped/failed for: {stmt} — {e}")
 
 def _migrate_emails():
     """One-time fixups for existing seeded accounts (safe to run repeatedly)."""
