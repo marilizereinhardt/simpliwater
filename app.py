@@ -459,7 +459,8 @@ def _quote_full(q):
 def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    return render_template('simpliwater_final.html')
+    user = User.query.get(session.get('user_id'))
+    return render_template('simpliwater_final.html', user_perms=user.permissions() if user else {})
 
 if __name__ == '__main__':
     with app.app_context():
