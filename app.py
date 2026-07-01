@@ -163,6 +163,37 @@ class PriceScheduleItem(db.Model):
 
 # ── AUTH HELPERS ─────────────────────────────────────────────────
 
+# ⚠️ TESTING MODE ────────────────────────────────────────────────
+# While TESTING_MODE is True, login is bypassed: every request is
+# auto-authenticated as the first admin user in the database. This is only
+# safe because there's no real client data in the app yet.
+#
+# BEFORE adding real client/quote/pricing data or sharing this URL outside
+# your team, set this back to False (or remove this block) so the normal
+# email/password login in login.html is enforced again.
+TESTING_MODE = os.environ.get('TESTING_MODE', '1') == '1'
+
+def _testing_autologin():
+    if 'user_id' in session:
+        return
+    admin = User.query.filter_by(role='admin', active=True).order_by(User.id).first()
+    if not admin:
+        return  # no users seeded yet — /api/init still needs to run
+    session['user_id'] = admin.id
+    session['user_name'] = admin.name
+    session['user_role'] = admin.role
+    session['user_perms'] = admin.permissions()
+
+@app.before_request
+def _testing_mode_autologin_hook():
+    if TESTING_MODE:
+        try:
+            _testing_autologin()
+        except Exception:
+            # DB may not be initialized yet (e.g. first-ever request) — let
+            # the route handle that normally instead of crashing here.
+            pass
+
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -333,7 +364,9 @@ def init_db():
 
     users_exist = User.query.count() > 0
 
-    if users_exist:
+    if TESTING_MODE:
+        pass  # no gate while testing — flip TESTING_MODE off before going live
+    elif users_exist:
         if 'user_id' not in session or session.get('user_role') != 'admin':
             return jsonify({'error': 'Forbidden — admin login required to re-run initialization'}), 403
     else:
