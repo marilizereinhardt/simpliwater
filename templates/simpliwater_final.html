@@ -1119,20 +1119,20 @@ function buildPrintArea(){
   const qNum=document.getElementById('q-num').textContent.trim();
   const qDate=document.getElementById('q-date').value;
   const qValid=document.getElementById('q-valid').value;
-  const scope=document.getElementById('q-scope').value.trim();
-  const contact=document.getElementById('q-contact').value.trim();
-  const phone=document.getElementById('q-phone').value.trim();
-  const email=document.getElementById('q-email').value.trim();
-  const vat=document.getElementById('q-vat').value.trim();
-  const brn=document.getElementById('q-brn').value.trim();
-  const addr=document.getElementById('q-address').value==='new'?document.getElementById('q-new-address').value.trim():document.getElementById('q-address').value;
+  const scope=escapeHtml(document.getElementById('q-scope').value.trim());
+  const contact=escapeHtml(document.getElementById('q-contact').value.trim());
+  const phone=escapeHtml(document.getElementById('q-phone').value.trim());
+  const email=escapeHtml(document.getElementById('q-email').value.trim());
+  const vat=escapeHtml(document.getElementById('q-vat').value.trim());
+  const brn=escapeHtml(document.getElementById('q-brn').value.trim());
+  const addr=document.getElementById('q-address').value==='new'?escapeHtml(document.getElementById('q-new-address').value.trim()):escapeHtml(document.getElementById('q-address').value);
   const clientSel=document.getElementById('q-client').value;
   const clientOpt=document.getElementById('q-client').options[document.getElementById('q-client').selectedIndex];
-  const clientName=clientSel==='new'?document.getElementById('q-new-client').value.trim():(clientOpt?clientOpt.text:'');
-  const payTerms=document.getElementById('q-pay-terms').value.trim();
-  const payNotes=document.getElementById('q-pay-notes').value.trim();
-  const tcStd=document.getElementById('q-tc').value.trim();
-  const tcExtra=document.getElementById('q-tc-extra').value.trim();
+  const clientName=clientSel==='new'?escapeHtml(document.getElementById('q-new-client').value.trim()):escapeHtml(clientOpt?clientOpt.text:'');
+  const payTerms=escapeHtml(document.getElementById('q-pay-terms').value.trim());
+  const payNotes=escapeHtml(document.getElementById('q-pay-notes').value.trim());
+  const tcStd=escapeHtml(document.getElementById('q-tc').value.trim());
+  const tcExtra=escapeHtml(document.getElementById('q-tc-extra').value.trim());
   const fmtDate=d=>{if(!d)return '—';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
   let sub=0,lineDisc=0;
   lineItems.forEach(it=>{const lt=it.q*it.r;sub+=lt;if(it.de)lineDisc+=lt*it.dp/100;});
@@ -1145,7 +1145,7 @@ function buildPrintArea(){
     const discCell=it.de&&it.dp>0?`<td style="text-align:right;">${it.dp}%</td><td style="text-align:right;">${fmt(da)}</td>`:(hasDiscount?'<td></td><td></td>':'');
     return `<tr style="border-bottom:1px solid #dde8f5;">
       <td style="padding:7px 8px;font-size:11px;">${i+1}</td>
-      <td style="padding:7px 8px;font-size:11px;">${it.d}</td>
+      <td style="padding:7px 8px;font-size:11px;">${escapeHtml(it.d)}</td>
       <td style="padding:7px 8px;font-size:11px;text-align:right;">${it.q}</td>
       <td style="padding:7px 8px;font-size:11px;text-align:right;">${fmt(it.r)}</td>
       ${discCell}
