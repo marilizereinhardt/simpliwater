@@ -171,7 +171,7 @@ class PriceScheduleItem(db.Model):
 # BEFORE adding real client/quote/pricing data or sharing this URL outside
 # your team, set this back to False (or remove this block) so the normal
 # email/password login in login.html is enforced again.
-TESTING_MODE = os.environ.get('TESTING_MODE', '1') == '1'
+TESTING_MODE = os.environ.get('TESTING_MODE', '0') == '1'
 
 def _testing_autologin():
     if 'user_id' in session:
@@ -374,17 +374,26 @@ def init_db():
         if not INIT_SETUP_TOKEN or supplied != INIT_SETUP_TOKEN:
             return jsonify({'error': 'Setup token required for first-time initialization. Set INIT_SETUP_TOKEN in your environment and pass ?setup_token=... once.'}), 403
 
+    _migrate_emails()
     _seed_users()
     _seed_price_schedule()
     _seed_clients()
     return jsonify({'status':'ok','message':'Database initialised'})
+
+def _migrate_emails():
+    """One-time fixups for existing seeded accounts (safe to run repeatedly)."""
+    old = User.query.filter_by(email='cmvdh1988@gmail.com').first()
+    if old:
+        old.email = 'simpliwatermu@gmail.com'
+        db.session.commit()
+        print("Migrated Christiaan's login email to simpliwatermu@gmail.com")
 
 def _seed_users():
     if User.query.count() > 0:
         return
     users = [
         {'name':'Shaughn',    'email':'shaughn@simpliwater.mu',          'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
-        {'name':'Christiaan', 'email':'cmvdh1988@gmail.com',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
+        {'name':'Christiaan', 'email':'simpliwatermu@gmail.com',         'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Marilize',   'email':'marilize.reinhardt@gmail.com',    'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Inge',       'email':'inge@simpliwater.mu',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Tyron',      'email':'tyron@simpliwater.mu',            'role':'field','perms':{'dashboard':False,'price':False,'users':False}},
