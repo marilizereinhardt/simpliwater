@@ -1,5 +1,7 @@
 import os
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+import time
+from collections import defaultdict
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -15,13 +17,50 @@ if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.environ.get('SECRET_KEY', 'simpliwater-change-this-in-production')
+
+# SECRET_KEY must come from the environment. We refuse to fall back to a
+# hardcoded value — a known secret key lets anyone forge valid session
+# cookies (including admin sessions). Fail loudly instead of silently
+# running insecurely.
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. Generate one with "
+        "`python3 -c \"import secrets; print(secrets.token_hex(32))\"` "
+        "and set it in your Render environment variables before starting the app."
+    )
+app.secret_key = SECRET_KEY
+
+# Lock down session cookies for production use over HTTPS.
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') != 'development'
+
+# One-time setup token: required to call /api/init before any admin exists.
+# Set this in Render's environment, hit /api/init?setup_token=<value> once,
+# then you can delete the env var (the endpoint locks itself to admins-only
+# automatically once at least one user exists).
+INIT_SETUP_TOKEN = os.environ.get('INIT_SETUP_TOKEN')
 
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 FROM_EMAIL = os.environ.get('FROM_EMAIL', 'simpliwatermu@gmail.com')
 APP_URL = os.environ.get('APP_URL', 'https://simpliwater.onrender.com')
 
 db = SQLAlchemy(app)
+
+# ── SIMPLE LOGIN RATE LIMITING (in-memory; fine for a single-instance app) ──
+_login_attempts = defaultdict(list)
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+def _too_many_login_attempts(key):
+    now = time.time()
+    attempts = [t for t in _login_attempts[key] if now - t < LOGIN_WINDOW_SECONDS]
+    _login_attempts[key] = attempts
+    return len(attempts) >= LOGIN_MAX_ATTEMPTS
+
+def _record_login_attempt(key):
+    _login_attempts[key].append(time.time())
 
 # ── MODELS ───────────────────────────────────────────────────────
 
@@ -189,9 +228,18 @@ def login_page():
 def login_post():
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '')
+
+    # Rate-limit by IP + email to slow down brute-force / credential stuffing.
+    rl_key = f"{request.remote_addr}:{email}"
+    if _too_many_login_attempts(rl_key):
+        return render_template('login.html', error='Too many attempts. Please wait a few minutes and try again.'), 429
+
     user = User.query.filter_by(email=email, active=True).first()
     if not user or not user.check_password(password):
+        _record_login_attempt(rl_key)
         return render_template('login.html', error='Incorrect email or password. Please try again.')
+
+    session.clear()
     session['user_id'] = user.id
     session['user_name'] = user.name
     session['user_role'] = user.role
@@ -270,8 +318,29 @@ def me():
 
 @app.route('/api/init', methods=['GET','POST'])
 def init_db():
-    """Initialize database"""
+    """Initialize database.
+
+    Bootstrap problem: on a brand-new database there are no users yet, so we
+    can't require login. Instead:
+      - If NO users exist yet, this works if the caller supplies the correct
+        `setup_token` (matching the INIT_SETUP_TOKEN env var) as a query
+        param or form field. This lets you seed the very first accounts.
+      - Once at least one user exists, this endpoint requires an
+        authenticated admin — it can never be called anonymously again,
+        even with the token.
+    """
     db.create_all()
+
+    users_exist = User.query.count() > 0
+
+    if users_exist:
+        if 'user_id' not in session or session.get('user_role') != 'admin':
+            return jsonify({'error': 'Forbidden — admin login required to re-run initialization'}), 403
+    else:
+        supplied = request.args.get('setup_token') or (request.form.get('setup_token') if request.form else None)
+        if not INIT_SETUP_TOKEN or supplied != INIT_SETUP_TOKEN:
+            return jsonify({'error': 'Setup token required for first-time initialization. Set INIT_SETUP_TOKEN in your environment and pass ?setup_token=... once.'}), 403
+
     _seed_users()
     _seed_price_schedule()
     _seed_clients()
@@ -287,8 +356,12 @@ def _seed_users():
         {'name':'Inge',       'email':'inge@simpliwater.mu',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Tyron',      'email':'tyron@simpliwater.mu',            'role':'field','perms':{'dashboard':False,'price':False,'users':False}},
     ]
-    default_password = 'Simpli2026!'
+    print("── SEEDED ACCOUNTS — SAVE THESE, THEY WON'T BE SHOWN AGAIN ──")
     for u in users:
+        # Each account gets its own random password instead of one shared,
+        # hardcoded password. Anyone reading the source code (or a public
+        # repo) learns nothing usable.
+        temp_password = secrets.token_urlsafe(9)
         user = User(
             name=u['name'], email=u['email'], role=u['role'],
             perm_dashboard=u['perms'].get('dashboard',True),
@@ -296,10 +369,11 @@ def _seed_users():
             perm_price=u['perms'].get('price',False),
             perm_users=u['perms'].get('users',False)
         )
-        user.set_password(default_password)
+        user.set_password(temp_password)
         db.session.add(user)
+        print(f"  {u['email']}  →  {temp_password}")
     db.session.commit()
-    print("Users seeded with default password: Simpli2026!")
+    print("── Log in with one of the above, then use 'Forgot password' to set your own. ──")
 
 def _seed_price_schedule():
     if PriceScheduleItem.query.count() > 0:
@@ -448,13 +522,18 @@ def save_quote():
             return jsonify({'error': 'Save failed — database schema error. Please contact support.'}), 500
         return jsonify({'error': 'Save failed — please try again or contact support'}), 500
 
+VALID_QUOTE_STATUSES = {'draft', 'sent', 'accepted', 'rejected'}
+
 @app.route('/api/quotes/<int:qid>/status', methods=['PATCH'])
 @login_required
 def update_status(qid):
     q = Quote.query.get_or_404(qid)
     if q.status in ('accepted','rejected'):
         return jsonify({'error':'Locked'}), 403
-    q.status = request.json.get('status',q.status)
+    new_status = (request.json or {}).get('status', q.status)
+    if new_status not in VALID_QUOTE_STATUSES:
+        return jsonify({'error': f'Invalid status. Must be one of: {", ".join(sorted(VALID_QUOTE_STATUSES))}'}), 400
+    q.status = new_status
     db.session.commit()
     return jsonify({'status':q.status})
 
@@ -495,7 +574,7 @@ def delete_price_item(iid):
     except Exception as e:
         db.session.rollback()
         app.logger.exception("delete_price_item failed")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Delete failed — please try again or contact support'}), 500
 
 # ── USERS API ────────────────────────────────────────────────────
 
@@ -546,4 +625,8 @@ def _quote_full(q):
     return s
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Never hardcode debug=True — Flask's debugger allows remote code
+    # execution if this is ever accidentally exposed. Control it via env var,
+    # defaulting to off.
+    debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
+    app.run(debug=debug_mode)
