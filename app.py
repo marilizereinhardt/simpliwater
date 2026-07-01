@@ -194,6 +194,7 @@ def _auto_schema_migration():
         try:
             db.create_all()
             _migrate_schema()
+            _emergency_password_reset()
         except Exception as e:
             print(f"Startup schema migration failed: {e}")
         _schema_migrated = True
@@ -410,6 +411,19 @@ def _migrate_schema():
                 conn.commit()
             except Exception as e:
                 print(f"Schema migration skipped/failed for: {stmt} — {e}")
+
+TEMP_RESET_PASSWORD = 'SimpliReset2026!'
+
+def _emergency_password_reset():
+    """One-time forced reset so Marilize can get back in without email.
+    REMOVE THIS FUNCTION (and its call below) once logged in again —
+    it's a temporary unlock, not something that should stay in the code."""
+    user = User.query.filter_by(email='marilize.reinhardt@gmail.com').first()
+    if user:
+        user.set_password(TEMP_RESET_PASSWORD)
+        user.reset_token = None
+        db.session.commit()
+        print(f"Emergency password reset applied for marilize.reinhardt@gmail.com", flush=True)
 
 def _migrate_emails():
     """One-time fixups for existing seeded accounts (safe to run repeatedly)."""
