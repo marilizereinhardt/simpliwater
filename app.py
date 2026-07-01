@@ -6,6 +6,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import sendgrid
 from sendgrid.helpers.mail import Mail
+import csv
+from io import StringIO
 
 app = Flask(__name__)
 
@@ -285,7 +287,7 @@ def _seed_users():
         return
     users = [
         {'name':'Shaughn',    'email':'shaughn@simpliwater.mu',          'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
-        {'name':'Christiaan', 'email':'cmvdh1988@gmail.com',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
+        {'name':'Christiaan', 'email':'simpliwatermu@gmail.com',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Marilize',   'email':'marilize.reinhardt@gmail.com',    'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Inge',       'email':'inge@simpliwater.mu',             'role':'admin','perms':{'dashboard':True,'price':True,'users':True}},
         {'name':'Tyron',      'email':'tyron@simpliwater.mu',            'role':'field','perms':{'dashboard':False,'price':False,'users':False}},
@@ -328,23 +330,9 @@ def _seed_price_schedule():
     db.session.commit()
 
 def _seed_clients():
-    if Client.query.count() > 0:
-        return
-    clients = [
-        {'name':'Tim Straw','contact':'Tim Straw','phone':'(+230) 5458 0126','email':'tim.straw@email.com','vat':'','brn':'',
-         'addresses':['Calodyne, Mauritius','Villa 4, Anse La Raie, Mauritius']},
-        {'name':'Residencia Belle Vue','contact':'Belle Vue Management','phone':'(+230) 5912 3456','email':'bv@bellevue.mu','vat':'28091234','brn':'C221XXXXX',
-         'addresses':['Residencia Belle Vue, Grand Baie','Site B — Pool Area, Grand Baie']},
-        {'name':'Tamarin Villas','contact':'Tamarin Villas Office','phone':'(+230) 5867 9100','email':'info@tamarinvillas.mu','vat':'','brn':'',
-         'addresses':['Tamarin Villas, Tamarin','Block C, Tamarin','Swimming Pool Area, Tamarin']},
-    ]
-    for c in clients:
-        client = Client(name=c['name'],contact=c['contact'],phone=c['phone'],email=c['email'],vat=c['vat'],brn=c['brn'])
-        db.session.add(client)
-        db.session.flush()
-        for addr in c['addresses']:
-            db.session.add(ClientAddress(client_id=client.id,address=addr))
-    db.session.commit()
+    # Don't auto-create dummy clients anymore
+    # Clients are added either via Quote creation or manual Client form
+    pass
 
 # ── CLIENT API ───────────────────────────────────────────────────
 
@@ -402,10 +390,20 @@ def save_quote():
         qnum = (data.get('quote_number') or '').strip()
         if not qnum or qnum == 'Select type →':
             return jsonify({'error':'Quote number missing — select a job type first'}), 400
-        existing = Quote.query.filter_by(quote_number=qnum).first()
+        
+        # Check for duplicates - ONLY if creating new quote
+        is_new = not data.get('quote_id')
+        if is_new:
+            existing = Quote.query.filter_by(quote_number=qnum).first()
+            if existing:
+                return jsonify({'error':f'Quote number {qnum} already exists. Choose a different number or edit the existing quote.'}), 409
+        
+        # Get or create quote
+        existing = Quote.query.filter_by(quote_number=qnum).first() if not is_new else None
         q = existing or Quote(quote_number=qnum)
         if not existing:
             db.session.add(q)
+        
         # Validate client_id - must exist or be None
         cid = data.get('client_id')
         if cid is not None:
@@ -415,6 +413,7 @@ def save_quote():
                     cid = None
             except (TypeError, ValueError):
                 cid = None
+        
         q.job_type    = data.get('job_type') or None
         q.client_id   = cid
         q.site_address= (data.get('site_address') or '')[:500]
@@ -430,6 +429,7 @@ def save_quote():
         q.total_amount= float(data.get('total_amount') or 0)
         q.created_by  = session.get('user_id')
         db.session.flush()
+        
         LineItem.query.filter_by(quote_id=q.id).delete()
         for i,item in enumerate(data.get('line_items',[])):
             db.session.add(LineItem(
@@ -446,7 +446,6 @@ def save_quote():
     except Exception as e:
         db.session.rollback()
         app.logger.exception("save_quote failed")
-        # Log the real error but return generic message to prevent schema disclosure
         if 'column' in str(e).lower() or 'undefined' in str(e).lower():
             return jsonify({'error': 'Save failed — database schema error. Please contact support.'}), 500
         return jsonify({'error': 'Save failed — please try again or contact support'}), 500
@@ -499,6 +498,53 @@ def delete_price_item(iid):
         db.session.rollback()
         app.logger.exception("delete_price_item failed")
         return jsonify({'error': str(e)}), 500
+
+# ── CSV EXPORT API ────────────────────────────────────────────────
+@app.route('/api/export/quotes', methods=['GET'])
+@login_required
+def export_quotes_csv():
+    try:
+        quotes = Quote.query.order_by(Quote.quote_number).all()
+        rows = []
+        for q in quotes:
+            rows.append({
+                'Quote Number': q.quote_number or '',
+                'Client': q.client.name if q.client else '',
+                'Job Type': q.job_type or '',
+                'Date': q.quote_date.strftime('%d/%m/%Y') if q.quote_date else '',
+                'Amount (MUR)': q.total_amount or 0,
+                'Status': q.status or '',
+                'Site Address': q.site_address or '',
+                'Scope': q.scope or '',
+            })
+        # Return as JSON for frontend to convert to CSV
+        return jsonify(rows), 200
+    except Exception as e:
+        app.logger.exception("export_quotes_csv failed")
+        return jsonify({'error': 'Export failed'}), 500
+
+@app.route('/api/export/clients', methods=['GET'])
+@login_required
+def export_clients_csv():
+    try:
+        clients = Client.query.order_by(Client.name).all()
+        rows = []
+        for c in clients:
+            addresses = ' | '.join([a.address for a in c.addresses])
+            rows.append({
+                'Client Name': c.name or '',
+                'Contact Person': c.contact or '',
+                'Phone': c.phone or '',
+                'Email': c.email or '',
+                'VAT': c.vat or '',
+                'BRN': c.brn or '',
+                'Addresses': addresses,
+            })
+        # Return as JSON for frontend to convert to CSV
+        return jsonify(rows), 200
+    except Exception as e:
+        app.logger.exception("export_clients_csv failed")
+        return jsonify({'error': 'Export failed'}), 500
 
 # ── USERS API ────────────────────────────────────────────────────
 
