@@ -68,6 +68,7 @@ class Client(db.Model):
     __tablename__ = 'clients'
     id         = db.Column(db.Integer, primary_key=True)
     name       = db.Column(db.String(200), nullable=False)
+    company    = db.Column(db.String(200))  # Optional company name
     contact    = db.Column(db.String(200))
     phone      = db.Column(db.String(50))
     email      = db.Column(db.String(200))
@@ -346,13 +347,37 @@ def get_clients():
 @login_required
 def create_client():
     data = request.json
-    client = Client(name=data.get('name',''),contact=data.get('contact',''),phone=data.get('phone',''),email=data.get('email',''),vat=data.get('vat',''),brn=data.get('brn',''))
+    client = Client(
+        name=data.get('name',''),
+        company=data.get('company','') or None,  # None if blank
+        contact=data.get('contact',''),
+        phone=data.get('phone',''),
+        email=data.get('email',''),
+        vat=data.get('vat',''),
+        brn=data.get('brn','')
+    )
     db.session.add(client)
     db.session.flush()
     for addr in data.get('addresses',[]):
         db.session.add(ClientAddress(client_id=client.id,address=addr))
     db.session.commit()
     return jsonify({'id':client.id,'name':client.name}), 201
+
+@app.route('/api/clients/<int:cid>', methods=['DELETE'])
+@login_required
+def delete_client(cid):
+    try:
+        client = Client.query.get_or_404(cid)
+        # Check if client has quotes - can't delete if it does
+        if client.quotes:
+            return jsonify({'error': f'Cannot delete "{client.name}" — this client has {len(client.quotes)} quote(s). Delete or reassign quotes first.'}), 409
+        db.session.delete(client)
+        db.session.commit()
+        return jsonify({'deleted': cid}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("delete_client failed")
+        return jsonify({'error': 'Delete failed'}), 500
 
 @app.route('/api/clients/<int:cid>/addresses', methods=['POST'])
 @login_required
@@ -533,6 +558,7 @@ def export_clients_csv():
             addresses = ' | '.join([a.address for a in c.addresses])
             rows.append({
                 'Client Name': c.name or '',
+                'Company Name': c.company or '',
                 'Contact Person': c.contact or '',
                 'Phone': c.phone or '',
                 'Email': c.email or '',
