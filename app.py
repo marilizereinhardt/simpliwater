@@ -224,7 +224,7 @@ def current_user():
 
 def send_reset_email(to_email, reset_url):
     if not SENDGRID_API_KEY:
-        print(f"[DEV] Reset URL: {reset_url}")
+        print(f"[DEV] Reset URL: {reset_url}", flush=True)
         return True
     try:
         sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
@@ -256,7 +256,7 @@ def send_reset_email(to_email, reset_url):
         sg.send(message)
         return True
     except Exception as e:
-        print(f"SendGrid error: {e}")
+        print(f"SendGrid error: {e}", flush=True)
         return False
 
 # ── AUTH ROUTES ──────────────────────────────────────────────────
