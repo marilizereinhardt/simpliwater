@@ -382,79 +382,34 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
 
   <!-- CLIENTS -->
   <div class="page" id="page-clients">
-    <div class="card" style="padding:14px 16px;margin-bottom:13px;">
-      <div style="display:grid;grid-template-columns:1fr 120px 120px;gap:10px;align-items:end;">
-        <div class="form-group" style="margin:0;">
-          <label>Search clients by name or email</label>
-          <input type="text" id="client-search" placeholder="e.g. Tim or Calodyne" oninput="renderClients()" 
-            style="width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Nunito Sans',sans-serif;outline:none;">
-        </div>
-        <button class="btn btn-mustard btn-sm" onclick="openClientForm()" style="width:100%;">+ Add Client</button>
-        <button class="btn btn-outline btn-sm" onclick="exportClientsCSV()" style="width:100%;">⬇ Export</button>
-      </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--text-light);" id="client-count">—</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;">
+      <span style="font-size:13px;color:var(--text-light);font-weight:600;">3 clients on record</span>
+      <button class="btn btn-mustard" onclick="showToast('Add client — Phase 2')">+ New Client</button>
     </div>
-    <div id="clients-list"></div>
-  </div>
-
-  <!-- ADD CLIENT MODAL -->
-  <div class="modal-overlay" id="client-modal" style="display:none;" onclick="if(event.target.id==='client-modal')closeModal('client-modal')">
-    <div class="modal" style="max-width:600px;">
-      <div class="modal-header">
-        <h3 style="margin:0;">Add New Client</h3>
-        <button style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-light);" onclick="closeModal('client-modal')">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-row c2">
-          <div class="form-group">
-            <label>Client Name *</label>
-            <input type="text" id="new-client-name" placeholder="e.g. Calodyne Ltd">
-          </div>
-          <div class="form-group">
-            <label>Company Name (optional)</label>
-            <input type="text" id="new-client-company" placeholder="e.g. Calodyne Ltd">
-          </div>
-        </div>
-        <div class="form-row c2">
-          <div class="form-group">
-            <label>Contact Person</label>
-            <input type="text" id="new-client-contact" placeholder="Tim Straw">
-          </div>
-          <div class="form-group">
-            <label>Phone</label>
-            <input type="tel" id="new-client-phone" placeholder="(+230) 5458 0126">
-          </div>
-        </div>
-        <div class="form-row c2">
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="new-client-email" placeholder="tim@company.com">
-          </div>
-          <div class="form-group">
-            <label>VAT Number</label>
-            <input type="text" id="new-client-vat" placeholder="28024189">
-          </div>
-          <div class="form-group">
-            <label>BRN</label>
-            <input type="text" id="new-client-brn" placeholder="C22186732">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Primary Address</label>
-          <input type="text" id="new-client-addr" placeholder="Lot 14, Chemin Vingt Pieds, Pereybere">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-gray" onclick="closeModal('client-modal')">Cancel</button>
-        <button class="btn btn-green" onclick="saveNewClient()">Save Client</button>
-      </div>
+    <div class="client-card"><div class="client-av">TS</div>
+      <div><div class="client-name">Tim Straw</div>
+        <div class="client-meta">Calodyne · (+230) 5458 0126 · tim.straw@email.com</div>
+        <div class="client-meta">📍 Calodyne, Mauritius · VAT: — · BRN: —</div></div>
+      <div style="text-align:right;"><strong style="font-size:18px;font-weight:900;color:var(--mustard-dark);font-family:'Nunito',sans-serif;">2</strong><div style="font-size:11px;color:var(--text-light);">quotes · 1 job</div></div>
+    </div>
+    <div class="client-card"><div class="client-av">BV</div>
+      <div><div class="client-name">Residencia Belle Vue</div>
+        <div class="client-meta">Commercial · (+230) 5912 3456 · bv@bellevue.mu</div>
+        <div class="client-meta">📍 Grand Baie · VAT: 28091234 · BRN: C221XXXXX</div></div>
+      <div style="text-align:right;"><strong style="font-size:18px;font-weight:900;color:var(--mustard-dark);font-family:'Nunito',sans-serif;">5</strong><div style="font-size:11px;color:var(--text-light);">quotes · 3 jobs</div></div>
+    </div>
+    <div class="client-card"><div class="client-av">TV</div>
+      <div><div class="client-name">Tamarin Villas</div>
+        <div class="client-meta">Residential · (+230) 5867 9100 · info@tamarinvillas.mu</div>
+        <div class="client-meta">📍 Tamarin · VAT: — · BRN: —</div></div>
+      <div style="text-align:right;"><strong style="font-size:18px;font-weight:900;color:var(--mustard-dark);font-family:'Nunito',sans-serif;">3</strong><div style="font-size:11px;color:var(--text-light);">quotes · 2 jobs</div></div>
     </div>
   </div>
 
   <!-- QUOTES LIST -->
   <div class="page" id="page-quotes">
     <div class="card" style="padding:14px 16px;margin-bottom:13px;">
-      <div style="display:grid;grid-template-columns:1fr 220px 100px;gap:10px;align-items:end;" id="quote-filter-grid">
+      <div style="display:grid;grid-template-columns:1fr 220px;gap:10px;align-items:end;" id="quote-filter-grid">
         <div class="form-group" style="margin:0;">
           <label>Search by quote # or client</label>
           <input type="text" id="quote-search" placeholder="e.g. EBC0030 or Tim" oninput="renderQuotes()">
@@ -472,7 +427,6 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
             <option value="job">Job Created</option>
           </select>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="exportQuotesCSV()" style="width:100%;">⬇ Export</button>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--text-light);" id="quote-count">—</div>
     </div>
@@ -584,17 +538,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
             <option value="GP">GP</option><option value="WEBC">WEBC</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Quote Number</label>
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            <div style="flex:1;">
-              <div class="quote-num-pill" id="q-num">Select type →</div>
-              <div style="margin-top:6px;font-size:11px;"><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="q-override-toggle" onchange="toggleQuoteNumberOverride()"> Use custom quote number</label></div>
-            </div>
-          </div>
-          <input type="text" id="q-num-custom" placeholder="e.g. EBC0029" style="display:none;margin-top:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Nunito Sans',sans-serif;outline:none;width:100%;" onchange="validateCustomQuoteNumber(this.value)">
-          <div id="q-num-error" style="display:none;margin-top:6px;padding:8px 10px;background:#ffe6e6;border:1.5px solid #ffcccc;border-radius:7px;color:#d32f2f;font-size:11px;font-weight:600;"></div>
-        </div>
+        <div class="form-group"><label>Quote Number</label><div class="quote-num-pill" id="q-num">Select type →</div></div>
         <div class="form-group"><label>Quote Date</label><input type="date" id="q-date"></div>
         <div class="form-group"><label>Valid Until (14 days)</label><input type="date" id="q-valid" readonly style="background:var(--blue-pale);color:var(--blue-mid);cursor:default;"></div>
       </div>
@@ -803,117 +747,6 @@ async function loadClients(){
   const onew=document.createElement('option');
   onew.value='new';onew.textContent='+ Add New Client…';sel.appendChild(onew);
   if(current) sel.value=current;
-  renderClients();
-}
-function renderClients(){
-  const search=(document.getElementById('client-search')?document.getElementById('client-search').value:'').trim().toLowerCase();
-  let filtered=CLIENTS_DATA;
-  if(search){
-    filtered=CLIENTS_DATA.filter(c=>{
-      const hay=((c.name||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase();
-      return hay.includes(search);
-    });
-  }
-  const countEl=document.getElementById('client-count');
-  if(countEl){
-    countEl.textContent=filtered.length+' of '+CLIENTS_DATA.length+' client'+(CLIENTS_DATA.length===1?'':'s')+(search?' (filtered)':'');
-  }
-  const listEl=document.getElementById('clients-list');
-  if(!listEl) return;
-  if(!filtered.length){
-    listEl.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-light);">No clients yet. Add your first client using the "+ Add Client" button above.</div>';
-    return;
-  }
-  listEl.innerHTML=filtered.map(c=>{
-    const addr=(c.addresses&&c.addresses.length)?c.addresses[0]:'—';
-    const initials=getInitials(c.name);
-    const companyLine=c.company?`<div class="client-meta" style="font-weight:600;color:var(--blue-mid);">${c.company}</div>`:'';
-    return `<div class="client-card" style="position:relative;">
-      <div class="client-av">${initials}</div>
-      <div style="flex:1;">
-        <div class="client-name">${c.name}</div>
-        ${companyLine}
-        <div class="client-meta">${c.contact||'—'} · ${c.phone||'—'} · ${c.email||'—'}</div>
-        <div class="client-meta">📍 ${addr} · VAT: ${c.vat||'—'} · BRN: ${c.brn||'—'}</div>
-      </div>
-      <button onclick="deleteClientConfirm(${c.id},'${c.name}')" title="Delete client" style="background:none;border:none;cursor:pointer;color:#c0d4e8;font-size:18px;line-height:1;padding:8px;transition:color .15s;" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#c0d4e8'">🗑</button>
-    </div>`;
-  }).join('');
-}
-function getInitials(name){
-  if(!name) return '?';
-  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-}
-function deleteClientConfirm(id, name){
-  if(!confirm(`Delete "${name}"?\n\nThis client will be permanently removed. Quotes linked to this client will be unaffected.`)) return;
-  deleteClient(id, name);
-}
-async function deleteClient(id, name){
-  const result=await api('DELETE','/api/clients/'+id);
-  if(result){
-    CLIENTS_DATA=CLIENTS_DATA.filter(c=>c.id!==id);
-    renderClients();
-    await loadClients();
-    showToast('"'+name+'" deleted');
-  }
-}
-function openClientForm(){
-  document.getElementById('new-client-name').value='';
-  document.getElementById('new-client-company').value='';
-  document.getElementById('new-client-contact').value='';
-  document.getElementById('new-client-phone').value='';
-  document.getElementById('new-client-email').value='';
-  document.getElementById('new-client-vat').value='';
-  document.getElementById('new-client-brn').value='';
-  document.getElementById('new-client-addr').value='';
-  document.getElementById('client-modal').style.display='flex';
-  document.getElementById('new-client-name').focus();
-}
-async function saveNewClient(){
-  const name=(document.getElementById('new-client-name').value||'').trim();
-  if(!name){showToast('Enter a client name');return;}
-  const result=await api('POST','/api/clients',{
-    name:name,
-    company:(document.getElementById('new-client-company').value||'').trim(),
-    contact:(document.getElementById('new-client-contact').value||'').trim(),
-    phone:(document.getElementById('new-client-phone').value||'').trim(),
-    email:(document.getElementById('new-client-email').value||'').trim(),
-    vat:(document.getElementById('new-client-vat').value||'').trim(),
-    brn:(document.getElementById('new-client-brn').value||'').trim(),
-    addresses:[(document.getElementById('new-client-addr').value||'').trim()].filter(a=>a)
-  });
-  if(result){
-    closeModal('client-modal');
-    await loadClients();
-    showToast('"'+name+'" added to clients');
-  }
-}
-async function exportClientsCSV(){
-  const data=await api('GET','/api/export/clients');
-  if(!data||!data.length){showToast('No clients to export');return;}
-  downloadCSV(data,'SimpliWater_Clients.csv');
-}
-async function exportQuotesCSV(){
-  const data=await api('GET','/api/export/quotes');
-  if(!data||!data.length){showToast('No quotes to export');return;}
-  downloadCSV(data,'SimpliWater_Quotes.csv');
-}
-function downloadCSV(rows,filename){
-  if(!rows.length)return;
-  const headers=Object.keys(rows[0]);
-  let csv=headers.join(',')+'\n';
-  rows.forEach(row=>{
-    csv+=headers.map(h=>{
-      let v=row[h]||'';
-      if(typeof v==='string'&&(v.includes(',')||v.includes('"')||v.includes('\n'))){
-        v='"'+v.replace(/"/g,'""')+'"';
-      }
-      return v;
-    }).join(',')+'\n';
-  });
-  const blob=new Blob([csv],{type:'text/csv'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
 // ── LOAD PRICE SCHEDULE FROM DB ───────────────────────────────
@@ -939,10 +772,6 @@ async function loadQuotes(){
   if(!data) return;
   QUOTES=data;
   renderQuotes();
-  // Update badge with count of open quotes (Draft + Sent only)
-  const openCount=QUOTES.filter(q=>q.status==='draft'||q.status==='sent').length;
-  const badges=document.querySelectorAll('.nav-badge');
-  if(badges.length>1) badges[1].textContent=openCount||'—'; // Quotes badge is second badge
 }
 
 // ── CLIENT CHANGE ─────────────────────────────────────────────
@@ -990,35 +819,6 @@ function setValidDate(){
   const t=document.getElementById('q-type').value;if(!t)return;
   const qd=document.getElementById('q-date').value;
   if(qd){const d=new Date(qd);d.setDate(d.getDate()+14);document.getElementById('q-valid').value=d.toISOString().split('T')[0];}
-}
-function toggleQuoteNumberOverride(){
-  const toggle=document.getElementById('q-override-toggle');
-  const customInput=document.getElementById('q-num-custom');
-  const errorEl=document.getElementById('q-num-error');
-  if(toggle.checked){
-    customInput.style.display='block';
-    customInput.focus();
-  } else {
-    customInput.style.display='none';
-    errorEl.style.display='none';
-    customInput.value='';
-  }
-}
-async function validateCustomQuoteNumber(value){
-  const errorEl=document.getElementById('q-num-error');
-  value=value.trim();
-  if(!value){
-    errorEl.style.display='none';
-    return;
-  }
-  // Check if quote number already exists in local QUOTES array
-  const exists=QUOTES.some(q=>q.quote_number.toUpperCase()===value.toUpperCase());
-  if(exists){
-    errorEl.textContent=`Quote number "${value}" already exists. Choose a different number.`;
-    errorEl.style.display='block';
-  } else {
-    errorEl.style.display='none';
-  }
 }
 
 // ── LINE ITEMS ────────────────────────────────────────────────
@@ -1094,14 +894,8 @@ function buildQuotePayload(status){
   const aa=(sub-ld)*(1-op/100);
   const total=aa*1.15;
   const clientId=document.getElementById('q-client').value;
-  // Get quote number - use custom if override is enabled
-  let qNum=document.getElementById('q-num').textContent.trim();
-  if(document.getElementById('q-override-toggle').checked){
-    qNum=document.getElementById('q-num-custom').value.trim();
-    if(!qNum){showToast('Enter a custom quote number');return null;}
-  }
   return {
-    quote_number: qNum,
+    quote_number: document.getElementById('q-num').textContent.trim(),
     job_type: document.getElementById('q-type').value,
     client_id: (clientId&&clientId!=='new')?parseInt(clientId):null,
     site_address: document.getElementById('q-address').value==='new'
@@ -1345,36 +1139,7 @@ function buildPrintArea(){
   const addr=document.getElementById('q-address').value==='new'?escapeHtml(document.getElementById('q-new-address').value.trim()):escapeHtml(document.getElementById('q-address').value);
   const clientSel=document.getElementById('q-client').value;
   const clientOpt=document.getElementById('q-client').options[document.getElementById('q-client').selectedIndex];
-  
-  // Get client info - company name + contact person intelligently
-  let clientName='';
-  let clientCompany='';
-  let billToDisplay='';
-  
-  if(clientSel==='new'){
-    clientName=escapeHtml(document.getElementById('q-new-client').value.trim());
-    clientCompany='';
-  } else if(clientSel){
-    const clientObj=CLIENTS_DATA.find(c=>c.id==clientSel);
-    if(clientObj){
-      clientName=escapeHtml(clientObj.name||'');
-      clientCompany=escapeHtml(clientObj.company||'');
-    }
-  }
-  
-  // Build Bill To display: show company name if available, then contact person
-  if(clientCompany){
-    billToDisplay=`<div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientCompany}</div>`;
-    if(contact){
-      billToDisplay+=`<div style="font-size:11px;color:#3a5a7a;margin-bottom:4px;"><strong>Contact:</strong> ${contact}</div>`;
-    } else if(clientName){
-      billToDisplay+=`<div style="font-size:11px;color:#3a5a7a;margin-bottom:4px;"><strong>Attn:</strong> ${clientName}</div>`;
-    }
-  } else {
-    // No company - show client name or contact person
-    billToDisplay=`<div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${contact||clientName||'—'}</div>`;
-  }
-  
+  const clientName=clientSel==='new'?escapeHtml(document.getElementById('q-new-client').value.trim()):escapeHtml(clientOpt?clientOpt.text:'');
   const payTerms=escapeHtml(document.getElementById('q-pay-terms').value.trim());
   const payNotes=escapeHtml(document.getElementById('q-pay-notes').value.trim());
   const tcStd=escapeHtml(document.getElementById('q-tc').value.trim());
@@ -1424,7 +1189,8 @@ function buildPrintArea(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;">
       <div style="background:#f0f6fc;border-radius:8px;padding:13px 15px;">
         <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Bill To</div>
-        ${billToDisplay}
+        <div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientName}</div>
+        ${contact?`<div style="font-size:11px;color:#3a5a7a;">${contact}</div>`:''}
         ${addr?`<div style="font-size:11px;color:#3a5a7a;margin-top:2px;">${addr}</div>`:''}
         ${phone?`<div style="font-size:11px;color:#3a5a7a;">Tel: ${phone}</div>`:''}
         ${email?`<div style="font-size:11px;color:#3a5a7a;">${email}</div>`:''}
