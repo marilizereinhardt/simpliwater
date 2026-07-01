@@ -409,7 +409,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
   <!-- QUOTES LIST -->
   <div class="page" id="page-quotes">
     <div class="card" style="padding:14px 16px;margin-bottom:13px;">
-      <div style="display:grid;grid-template-columns:1fr 220px;gap:10px;align-items:end;" id="quote-filter-grid">
+      <div style="display:grid;grid-template-columns:1fr 220px 100px;gap:10px;align-items:end;" id="quote-filter-grid">
         <div class="form-group" style="margin:0;">
           <label>Search by quote # or client</label>
           <input type="text" id="quote-search" placeholder="e.g. EBC0030 or Tim" oninput="renderQuotes()">
@@ -427,6 +427,7 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
             <option value="job">Job Created</option>
           </select>
         </div>
+        <button class="btn btn-outline btn-sm" onclick="exportQuotesCSV()" style="width:100%;">⬇ Export</button>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--text-light);" id="quote-count">—</div>
     </div>
@@ -538,7 +539,17 @@ body{font-family:'Nunito Sans',sans-serif;background:var(--surface);color:var(--
             <option value="GP">GP</option><option value="WEBC">WEBC</option>
           </select>
         </div>
-        <div class="form-group"><label>Quote Number</label><div class="quote-num-pill" id="q-num">Select type →</div></div>
+                <div class="form-group">
+          <label>Quote Number</label>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="flex:1;">
+              <div class="quote-num-pill" id="q-num">Select type →</div>
+              <div style="margin-top:6px;font-size:11px;"><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="q-override-toggle" onchange="toggleQuoteNumberOverride()"> Use custom quote number</label></div>
+            </div>
+          </div>
+          <input type="text" id="q-num-custom" placeholder="e.g. EBC0029" style="display:none;margin-top:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Nunito Sans',sans-serif;outline:none;width:100%;" onchange="validateCustomQuoteNumber(this.value)">
+          <div id="q-num-error" style="display:none;margin-top:6px;padding:8px 10px;background:#ffe6e6;border:1.5px solid #ffcccc;border-radius:7px;color:#d32f2f;font-size:11px;font-weight:600;"></div>
+        </div>
         <div class="form-group"><label>Quote Date</label><input type="date" id="q-date"></div>
         <div class="form-group"><label>Valid Until (14 days)</label><input type="date" id="q-valid" readonly style="background:var(--blue-pale);color:var(--blue-mid);cursor:default;"></div>
       </div>
@@ -779,7 +790,7 @@ function onClientChange(){
   const v=document.getElementById('q-client').value;
   const nw=document.getElementById('new-client-wrap');
   const as=document.getElementById('q-address');
-  ['q-contact','q-phone','q-email','q-vat','q-brn','q-new-client','q-new-client-company'].forEach(id=>document.getElementById(id).value='');
+  ['q-contact','q-phone','q-email','q-vat','q-brn'].forEach(id=>document.getElementById(id).value='');
   if(v==='new'){
     nw.style.display='';
     as.innerHTML='<option value="new">+ Type new address…</option>';
@@ -1139,7 +1150,31 @@ function buildPrintArea(){
   const addr=document.getElementById('q-address').value==='new'?escapeHtml(document.getElementById('q-new-address').value.trim()):escapeHtml(document.getElementById('q-address').value);
   const clientSel=document.getElementById('q-client').value;
   const clientOpt=document.getElementById('q-client').options[document.getElementById('q-client').selectedIndex];
-  const clientName=clientSel==='new'?escapeHtml(document.getElementById('q-new-client').value.trim()):escapeHtml(clientOpt?clientOpt.text:'');
+  let clientName='';
+  let clientCompany='';
+  let billToDisplay='';
+  
+  if(clientSel==='new'){
+    clientName=escapeHtml(document.getElementById('q-new-client').value.trim());
+    clientCompany=escapeHtml(document.getElementById('q-new-client-company').value.trim() || '');
+  } else if(clientSel){
+    const clientObj=CLIENTS_DATA.find(c=>c.id==clientSel);
+    if(clientObj){
+      clientName=escapeHtml(clientObj.name||'');
+      clientCompany=escapeHtml(clientObj.company||'');
+    }
+  }
+  
+  if(clientCompany){
+    billToDisplay=`<div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientCompany}</div>`;
+    if(contact){
+      billToDisplay+=`<div style="font-size:11px;color:#3a5a7a;margin-bottom:4px;"><strong>Contact:</strong> ${contact}</div>`;
+    } else if(clientName){
+      billToDisplay+=`<div style="font-size:11px;color:#3a5a7a;margin-bottom:4px;"><strong>Attn:</strong> ${clientName}</div>`;
+    }
+  } else {
+    billToDisplay=`<div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${contact||clientName||'—'}</div>`;
+  }
   const payTerms=escapeHtml(document.getElementById('q-pay-terms').value.trim());
   const payNotes=escapeHtml(document.getElementById('q-pay-notes').value.trim());
   const tcStd=escapeHtml(document.getElementById('q-tc').value.trim());
@@ -1189,8 +1224,7 @@ function buildPrintArea(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;">
       <div style="background:#f0f6fc;border-radius:8px;padding:13px 15px;">
         <div style="font-size:10px;font-weight:800;color:#1e6fbf;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Bill To</div>
-        <div style="font-size:13px;font-weight:700;color:#0a2540;margin-bottom:4px;">${clientName}</div>
-        ${contact?`<div style="font-size:11px;color:#3a5a7a;">${contact}</div>`:''}
+        ${billToDisplay}
         ${addr?`<div style="font-size:11px;color:#3a5a7a;margin-top:2px;">${addr}</div>`:''}
         ${phone?`<div style="font-size:11px;color:#3a5a7a;">Tel: ${phone}</div>`:''}
         ${email?`<div style="font-size:11px;color:#3a5a7a;">${email}</div>`:''}
@@ -1303,3 +1337,248 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 </body>
 </html>
+// ========== PHASE 1: QUOTE NUMBER OVERRIDE ==========
+function toggleQuoteNumberOverride(){
+  const toggle=document.getElementById('q-override-toggle');
+  const customInput=document.getElementById('q-num-custom');
+  const errorEl=document.getElementById('q-num-error');
+  if(toggle.checked){
+    customInput.style.display='block';
+    customInput.focus();
+  } else {
+    customInput.style.display='none';
+    errorEl.style.display='none';
+    customInput.value='';
+  }
+}
+async function validateCustomQuoteNumber(value){
+  const errorEl=document.getElementById('q-num-error');
+  value=value.trim();
+  if(!value){
+    errorEl.style.display='none';
+    return;
+  }
+  const exists=QUOTES.some(q=>q.quote_number.toUpperCase()===value.toUpperCase());
+  if(exists){
+    errorEl.textContent=`Quote number "${value}" already exists. Choose a different number.`;
+    errorEl.style.display='block';
+  } else {
+    errorEl.style.display='none';
+  }
+}
+
+// ========== PHASE 2: CLIENTS MANAGEMENT ==========
+function renderClients(){
+  const search=(document.getElementById('client-search')?document.getElementById('client-search').value:'').trim().toLowerCase();
+  let filtered=CLIENTS_DATA;
+  if(search){
+    filtered=CLIENTS_DATA.filter(c=>{
+      const hay=((c.name||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase();
+      return hay.includes(search);
+    });
+  }
+  const countEl=document.getElementById('client-count');
+  if(countEl){
+    countEl.textContent=filtered.length+' of '+CLIENTS_DATA.length+' client'+(CLIENTS_DATA.length===1?'':'s')+(search?' (filtered)':'');
+  }
+  const listEl=document.getElementById('clients-list');
+  if(!listEl) return;
+  if(!filtered.length){
+    listEl.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-light);">No clients yet. Add your first client using the "+ Add Client" button above.</div>';
+    return;
+  }
+  listEl.innerHTML=filtered.map(c=>{
+    const addr=(c.addresses&&c.addresses.length)?c.addresses[0]:'—';
+    const initials=getInitials(c.name);
+    const companyLine=c.company?`<div class="client-meta" style="font-weight:600;color:var(--blue-mid);">${c.company}</div>`:'';
+    return `<div class="client-card" style="position:relative;">
+      <div class="client-av">${initials}</div>
+      <div style="flex:1;">
+        <div class="client-name">${c.name}</div>
+        ${companyLine}
+        <div class="client-meta">${c.contact||'—'} · ${c.phone||'—'} · ${c.email||'—'}</div>
+        <div class="client-meta">📍 ${addr} · VAT: ${c.vat||'—'} · BRN: ${c.brn||'—'}</div>
+      </div>
+      <button onclick="deleteClientConfirm(${c.id},'${c.name}')" title="Delete client" style="background:none;border:none;cursor:pointer;color:#c0d4e8;font-size:18px;line-height:1;padding:8px;transition:color .15s;" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#c0d4e8'">🗑</button>
+    </div>`;
+  }).join('');
+}
+function getInitials(name){
+  if(!name) return '?';
+  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+function openClientForm(){
+  document.getElementById('new-client-name').value='';
+  document.getElementById('new-client-company').value='';
+  document.getElementById('new-client-contact').value='';
+  document.getElementById('new-client-phone').value='';
+  document.getElementById('new-client-email').value='';
+  document.getElementById('new-client-vat').value='';
+  document.getElementById('new-client-brn').value='';
+  document.getElementById('new-client-addr').value='';
+  document.getElementById('client-modal').style.display='flex';
+  document.getElementById('new-client-name').focus();
+}
+async function saveNewClient(){
+  const name=(document.getElementById('new-client-name').value||'').trim();
+  if(!name){showToast('Enter a client name');return;}
+  const result=await api('POST','/api/clients',{
+    name:name,
+    company:(document.getElementById('new-client-company').value||'').trim(),
+    contact:(document.getElementById('new-client-contact').value||'').trim(),
+    phone:(document.getElementById('new-client-phone').value||'').trim(),
+    email:(document.getElementById('new-client-email').value||'').trim(),
+    vat:(document.getElementById('new-client-vat').value||'').trim(),
+    brn:(document.getElementById('new-client-brn').value||'').trim(),
+    addresses:[(document.getElementById('new-client-addr').value||'').trim()].filter(a=>a)
+  });
+  if(result){
+    closeModal('client-modal');
+    await loadClients();
+    showToast('"'+name+'" added to clients');
+  }
+}
+function deleteClientConfirm(id, name){
+  if(!confirm(`Delete "${name}"?\n\nThis client will be permanently removed. Quotes linked to this client will be unaffected.`)) return;
+  deleteClient(id, name);
+}
+async function deleteClient(id, name){
+  const result=await api('DELETE','/api/clients/'+id);
+  if(result){
+    CLIENTS_DATA=CLIENTS_DATA.filter(c=>c.id!==id);
+    renderClients();
+    await loadClients();
+    showToast('"'+name+'" deleted');
+  }
+}
+
+// ========== CSV EXPORT ==========
+async function exportClientsCSV(){
+  const data=await api('GET','/api/export/clients');
+  if(!data||!data.length){showToast('No clients to export');return;}
+  downloadCSV(data,'SimpliWater_Clients.csv');
+}
+async function exportQuotesCSV(){
+  const data=await api('GET','/api/export/quotes');
+  if(!data||!data.length){showToast('No quotes to export');return;}
+  downloadCSV(data,'SimpliWater_Quotes.csv');
+}
+function downloadCSV(rows,filename){
+  if(!rows.length)return;
+  const headers=Object.keys(rows[0]);
+  let csv=headers.join(',')+'
+';
+  rows.forEach(row=>{
+    csv+=headers.map(h=>{
+      let v=row[h]||'';
+      if(typeof v==='string'&&(v.includes(',')||v.includes('"')||v.includes('
+'))){
+        v='"'+v.replace(/"/g,'""')+'"';
+      }
+      return v;
+    }).join(',')+'
+';
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+// ========== QUOTE NUMBER OVERRIDE IN BUILDER ==========
+function buildQuotePayload(status){
+  let sub=0,ld=0;
+  lineItems.forEach(it=>{const lt=it.q*it.r;sub+=lt;if(it.de)ld+=lt*it.dp/100;});
+  const op=parseFloat(document.getElementById('overall-disc').value)||0;
+  const aa=(sub-ld)*(1-op/100);
+  const total=aa*1.15;
+  const clientId=document.getElementById('q-client').value;
+  let qNum=document.getElementById('q-num').textContent.trim();
+  if(document.getElementById('q-override-toggle').checked){
+    qNum=document.getElementById('q-num-custom').value.trim();
+    if(!qNum){showToast('Enter a custom quote number');return null;}
+  }
+  return {
+    quote_number: qNum,
+    job_type: document.getElementById('q-type').value,
+    client_id: (clientId&&clientId!=='new')?parseInt(clientId):null,
+    site_address: document.getElementById('q-address').value==='new'
+      ?document.getElementById('q-new-address').value
+      :document.getElementById('q-address').value,
+    scope: document.getElementById('q-scope').value,
+    quote_date: document.getElementById('q-date').value,
+    valid_until: document.getElementById('q-valid').value,
+    status: status||'draft',
+    pay_terms: document.getElementById('q-pay-terms').value,
+    pay_notes: document.getElementById('q-pay-notes').value,
+    tc_standard: document.getElementById('q-tc').value,
+    tc_extra: document.getElementById('q-tc-extra').value,
+    overall_disc: op,
+    total_amount: total,
+    line_items: lineItems.map(it=>({
+      description:it.d, quantity:it.q, unit_rate:it.r,
+      disc_enabled:it.de, disc_pct:it.dp
+    }))
+  };
+}
+
+// ========== CLIENTS HELPER FUNCTIONS ==========
+async function loadClients(){
+  const data=await api('GET','/api/clients');
+  if(!data) return;
+  CLIENTS_DATA=data;
+  const sel=document.getElementById('q-client');
+  const current=sel.value;
+  sel.innerHTML='<option value="">— Select existing client —</option>';
+  CLIENTS_DATA.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.id;o.textContent=c.name;sel.appendChild(o);
+  });
+  const onew=document.createElement('option');
+  onew.value='new';onew.textContent='+ Add New Client…';sel.appendChild(onew);
+  if(current) sel.value=current;
+  renderClients();
+}
+
+function onClientChange(){
+  const v=document.getElementById('q-client').value;
+  const nw=document.getElementById('new-client-wrap');
+  const as=document.getElementById('q-address');
+  ['q-contact','q-phone','q-email','q-vat','q-brn','q-new-client','q-new-client-company'].forEach(id=>document.getElementById(id).value='');
+  if(v==='new'){
+    nw.style.display='';
+    as.innerHTML='<option value="new">+ Type new address…</option>';
+  } else if(v){
+    nw.style.display='none';
+    const c=CLIENTS_DATA.find(c=>c.id==v);
+    if(c){
+      document.getElementById('q-contact').value=c.contact||'';
+      document.getElementById('q-phone').value=c.phone||'';
+      document.getElementById('q-email').value=c.email||'';
+      document.getElementById('q-vat').value=c.vat||'';
+      document.getElementById('q-brn').value=c.brn||'';
+      as.innerHTML='<option value="">— Select site address —</option>';
+      (c.addresses||[]).forEach(a=>{
+        const o=document.createElement('option');o.value=a;o.textContent=a;as.appendChild(o);
+      });
+      const o2=document.createElement('option');o2.value='new';o2.textContent='+ Add new address…';as.appendChild(o2);
+    }
+  } else {
+    nw.style.display='none';
+    as.innerHTML='<option value="">— Select client first —</option>';
+  }
+  onAddressChange();
+}
+
+// ========== OPEN QUOTES BADGE ==========
+async function loadQuotes(){
+  const data=await api('GET','/api/quotes');
+  if(!data) return;
+  QUOTES=data;
+  renderQuotes();
+  const openCount=QUOTES.filter(q=>q.status==='draft'||q.status==='sent').length;
+  const badges=document.querySelectorAll('.nav-badge');
+  if(badges.length>1) badges[1].textContent=openCount||'—';
+}
+
+
+
