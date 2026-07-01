@@ -135,14 +135,15 @@ def login_required(f):
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
-        data = request.json
-        user = User.query.filter_by(email=data.get('email')).first()
-        if user and user.check_password(data.get('password')):
+        email = request.form.get('email', '')
+        password = request.form.get('password', '')
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
             session['user_id'] = user.id
             session['user_name'] = user.name
             session['user_role'] = user.role
-            return jsonify({'ok': True}), 200
-        return jsonify({'error': 'Invalid email or password'}), 401
+            return redirect(url_for('index'))
+        return render_template('login.html', error='Invalid email or password')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -475,4 +476,3 @@ if __name__ == '__main__':
             _seed_users()
         _seed_clients()
     app.run(debug=False)
- 
